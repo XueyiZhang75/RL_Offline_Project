@@ -1,0 +1,13 @@
+dataset_name,resolved_env_id,algorithm,n_runs,mean_raw_return,std_raw_return,ci95_raw_return_low,ci95_raw_return_high,mean_normalized_score,std_normalized_score,ci95_normalized_score_low,ci95_normalized_score_high,notes
+hopper-medium,Hopper-v4,bc,5,1375.04,52.11,1310.34,1439.74,42.51,1.61,40.51,44.51,d3rlpy benchmark; 100000 steps; 5 seeds
+hopper-medium,Hopper-v4,cql,5,102.55,52.97,36.78,168.32,3.17,1.64,1.14,5.20,d3rlpy benchmark; 100000 steps; 5 seeds
+hopper-medium,Hopper-v4,iql,5,990.94,280.70,642.41,1339.47,30.64,8.68,19.86,41.41,d3rlpy benchmark; 100000 steps; 5 seeds
+hopper-medium,Hopper-v4,td3bc,5,1437.84,108.26,1303.42,1572.26,44.46,3.35,40.30,48.61,d3rlpy benchmark; 100000 steps; 5 seeds
+hopper-medium-replay,Hopper-v4,bc,5,640.19,241.85,339.90,940.48,19.79,7.48,10.51,29.08,d3rlpy benchmark; 100000 steps; 5 seeds
+hopper-medium-replay,Hopper-v4,cql,5,862.04,465.19,284.43,1439.65,26.65,14.38,8.79,44.51,d3rlpy benchmark; 100000 steps; 5 seeds
+hopper-medium-replay,Hopper-v4,iql,5,992.17,442.32,442.95,1541.39,30.68,13.68,13.70,47.66,d3rlpy benchmark; 100000 steps; 5 seeds
+hopper-medium-replay,Hopper-v4,td3bc,5,712.50,266.07,382.13,1042.88,22.03,8.23,11.81,32.24,d3rlpy benchmark; 100000 steps; 5 seeds
+hopper-medium-expert,Hopper-v4,bc,5,1519.56,108.38,1384.98,1654.13,46.98,3.35,42.82,51.14,d3rlpy benchmark; 100000 steps; 5 seeds
+hopper-medium-expert,Hopper-v4,cql,5,42.56,46.77,-15.51,100.64,1.32,1.45,-0.48,3.11,d3rlpy benchmark; 100000 steps; 5 seeds
+hopper-medium-expert,Hopper-v4,iql,5,910.67,251.86,597.94,1223.40,28.16,7.79,18.49,37.83,d3rlpy benchmark; 100000 steps; 5 seeds
+hopper-medium-expert,Hopper-v4,td3bc,5,2041.04,315.82,1648.90,2433.18,63.11,9.76,50.98,75.23,d3rlpy benchmark; 100000 steps; 5 seeds

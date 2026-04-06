@@ -1,0 +1,13 @@
+dataset_name,algorithm,n_runs,mean_normalized_score,std_normalized_score,ci95_norm_low,ci95_norm_high
+hopper-medium,bc,5,42.51,1.61,40.51,44.51
+hopper-medium,cql,5,3.17,1.64,1.14,5.20
+hopper-medium,iql,5,30.64,8.68,19.86,41.41
+hopper-medium,td3bc,5,44.46,3.35,40.30,48.61
+hopper-medium-replay,bc,5,19.79,7.48,10.51,29.08
+hopper-medium-replay,cql,5,26.65,14.38,8.79,44.51
+hopper-medium-replay,iql,5,30.68,13.68,13.70,47.66
+hopper-medium-replay,td3bc,5,22.03,8.23,11.81,32.24
+hopper-medium-expert,bc,5,46.98,3.35,42.82,51.14
+hopper-medium-expert,cql,5,1.32,1.45,-0.48,3.11
+hopper-medium-expert,iql,5,28.16,7.79,18.49,37.83
+hopper-medium-expert,td3bc,5,63.11,9.76,50.98,75.23

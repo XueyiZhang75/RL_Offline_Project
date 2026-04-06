@@ -1,0 +1,31 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Training checkpoints (large binary files, not required for result reproduction)
+artifacts/training_main/*.pt
+artifacts/training_iql/*.pt
+artifacts/training_quality/*.pt
+artifacts/training_validation/*.pt
+artifacts/training_benchmark/*.d3
+artifacts/training_benchmark/d4rl_cache/
+
+# Raw D4RL data
+*.hdf5
+
+# Behavior pool checkpoints (regenerable via build_envA_v2_behavior_pool.py)
+# artifacts/behavior_pool/*.pt  <- kept for reproducibility (1.9 MB total)
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

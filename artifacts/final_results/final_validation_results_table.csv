@@ -1,0 +1,13 @@
+env_name,dataset_name,coverage,algorithm,n_seeds,mean_return,std_return,mean_success_rate
+EnvB,envB_small_wide_medium,wide,bc,20,0.7600,0.0000,1.0000
+EnvB,envB_small_wide_medium,wide,cql,20,0.7600,0.0000,1.0000
+EnvB,envB_small_wide_medium,wide,iql,20,0.7600,0.0000,1.0000
+EnvB,envB_large_narrow_medium,narrow,bc,20,0.7600,0.0000,1.0000
+EnvB,envB_large_narrow_medium,narrow,cql,20,0.7600,0.0000,1.0000
+EnvB,envB_large_narrow_medium,narrow,iql,20,0.7600,0.0000,1.0000
+EnvC,envC_small_wide_medium,wide,bc,20,0.7600,0.0000,1.0000
+EnvC,envC_small_wide_medium,wide,cql,20,0.7600,0.0000,1.0000
+EnvC,envC_small_wide_medium,wide,iql,20,0.7600,0.0000,1.0000
+EnvC,envC_large_narrow_medium,narrow,bc,20,0.7600,0.0000,1.0000
+EnvC,envC_large_narrow_medium,narrow,cql,20,0.7600,0.0000,1.0000
+EnvC,envC_large_narrow_medium,narrow,iql,20,0.7600,0.0000,1.0000

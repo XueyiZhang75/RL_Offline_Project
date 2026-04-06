@@ -1,0 +1,14 @@
+dataset_name,env_name,file_exists,load_ok,integrity_ok,num_transitions,num_episodes,avg_episode_length,median_episode_length,avg_return,std_return,return_p10,return_p50,return_p90,success_rate,unique_state_count,unique_state_action_count,normalized_state_coverage,normalized_state_action_coverage,state_visitation_entropy,unique_source_policy_count,source_policy_entropy,audit_status,freeze_ready,notes
+envB_small_wide_medium,EnvB,yes,yes,yes,50012,636,78.64,79.50,-0.0521,0.5854,-1.0000,0.2050,0.4600,0.7343,148,592,0.993289,0.993289,6.4968,6,2.5787,pass,yes,ok
+envB_large_narrow_medium,EnvB,yes,yes,yes,200014,2529,79.09,81.00,-0.0744,0.5978,-1.0000,0.1900,0.4800,0.7165,148,592,0.993289,0.993289,6.4420,1,-0.0000,pass,yes,ok
+envC_small_wide_medium,EnvC,yes,yes,yes,50046,687,72.85,71.00,0.0532,0.5752,-1.0000,0.2900,0.5400,0.7817,233,921,0.995726,0.983974,6.9527,6,2.5830,pass,yes,ok
+envC_large_narrow_medium,EnvC,yes,yes,yes,200025,2817,71.01,69.00,0.1061,0.5457,-1.0000,0.3100,0.5500,0.8161,225,828,0.961538,0.884615,6.6250,1,-0.0000,pass,yes,ok
+envA_v2_small_wide_medium,EnvA_v2,yes,yes,yes,50007,540,92.61,94.00,-0.1779,0.4803,-1.0000,0.0600,0.1800,0.7481,272,550,0.405970,0.205224,7.8425,6,2.5845,pass,yes,ok
+envA_v2_small_narrow_medium,EnvA_v2,yes,yes,yes,50082,528,94.85,96.00,-0.2269,0.4819,-1.0000,0.0400,0.1300,0.7216,80,161,0.119403,0.060075,6.2192,1,-0.0000,pass,yes,ok
+envA_v2_large_wide_medium,EnvA_v2,yes,yes,yes,200039,2154,92.87,94.00,-0.1687,0.4706,-1.0000,0.0600,0.1700,0.7600,280,569,0.417910,0.212313,7.8420,6,2.5847,pass,yes,ok
+envA_v2_large_narrow_medium,EnvA_v2,yes,yes,yes,200094,2109,94.88,96.00,-0.2228,0.4792,-1.0000,0.0400,0.1300,0.7259,80,161,0.119403,0.060075,6.2188,1,-0.0000,pass,yes,ok
+envA_v2_quality_random_wide50k,EnvA_v2,yes,yes,yes,50000,500,100.00,100.00,-1.0000,0.0000,-1.0000,-1.0000,-1.0000,0.0000,294,1023,0.438806,0.381716,6.0245,1,-0.0000,pass,yes,ok
+envA_v2_quality_suboptimal_wide50k,EnvA_v2,yes,yes,yes,50085,514,97.44,100.00,-0.5873,0.5204,-1.0000,-1.0000,0.1000,0.3872,275,557,0.410448,0.207836,7.8102,6,2.5849,pass,yes,ok
+envA_v2_quality_medium_wide50k,EnvA_v2,yes,yes,yes,50062,538,93.05,94.00,-0.1926,0.4843,-1.0000,0.0600,0.1700,0.7379,275,557,0.410448,0.207836,7.8405,6,2.5847,pass,yes,ok
+envA_v2_quality_expert_wide50k,EnvA_v2,yes,yes,yes,50022,663,75.45,73.00,0.2229,0.2211,0.0620,0.2700,0.3900,0.9774,260,406,0.388060,0.151493,7.8200,6,2.5676,pass,yes,ok
+envA_v2_quality_mixed_wide50k,EnvA_v2,yes,yes,yes,50023,555,90.13,95.00,-0.2851,0.5718,-1.0000,0.0500,0.2760,0.6162,405,1138,0.604478,0.424627,7.9413,13,3.3388,pass,yes,ok

@@ -1,0 +1,16 @@
+quality_bin,algorithm,n_seeds,mean_return,std_return,ci95_return_low,ci95_return_high,mean_success_rate,std_success_rate,ci95_sr_low,ci95_sr_high
+random,bc,20,-1.0000,0.0000,nan,nan,0.0000,0.0000,nan,nan
+random,cql,20,-1.0000,0.0000,nan,nan,0.0000,0.0000,nan,nan
+random,iql,20,-1.0000,0.0000,nan,nan,0.0000,0.0000,nan,nan
+suboptimal,bc,20,0.3930,0.0306,0.3787,0.4073,1.0000,0.0000,nan,nan
+suboptimal,cql,20,0.0505,0.6223,-0.2408,0.3418,0.7500,0.4443,0.5421,0.9579
+suboptimal,iql,20,0.4020,0.0101,0.3973,0.4067,1.0000,0.0000,nan,nan
+medium,bc,20,0.4000,0.0103,0.3952,0.4048,1.0000,0.0000,nan,nan
+medium,cql,20,0.3315,0.3136,0.1848,0.4782,0.9500,0.2236,0.8453,1.0547
+medium,iql,20,0.4020,0.0101,0.3973,0.4067,1.0000,0.0000,nan,nan
+expert,bc,20,0.3960,0.0094,0.3916,0.4004,1.0000,0.0000,nan,nan
+expert,cql,20,0.3890,0.0433,0.3687,0.4093,1.0000,0.0000,nan,nan
+expert,iql,20,0.4000,0.0103,0.3952,0.4048,1.0000,0.0000,nan,nan
+mixed,bc,20,0.3930,0.0073,0.3896,0.3964,1.0000,0.0000,nan,nan
+mixed,cql,20,0.3930,0.0073,0.3896,0.3964,1.0000,0.0000,nan,nan
+mixed,iql,20,0.3930,0.0073,0.3896,0.3964,1.0000,0.0000,nan,nan

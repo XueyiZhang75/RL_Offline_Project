@@ -1,0 +1,13 @@
+dataset_name,algorithm,n_seeds,mean_return,std_return,ci95_return_low,ci95_return_high,mean_success_rate,std_success_rate,ci95_sr_low,ci95_sr_high
+envA_v2_small_wide_medium,bc,20,0.3265,0.3124,0.1803,0.4727,0.9500,0.2236,0.8453,1.0547
+envA_v2_small_wide_medium,cql,20,0.3970,0.0098,0.3924,0.4016,1.0000,0.0000,nan,nan
+envA_v2_small_wide_medium,iql,20,0.3970,0.0098,0.3924,0.4016,1.0000,0.0000,nan,nan
+envA_v2_small_narrow_medium,bc,20,0.2700,0.0000,0.2700,0.2700,1.0000,0.0000,nan,nan
+envA_v2_small_narrow_medium,cql,20,0.2700,0.0000,0.2700,0.2700,1.0000,0.0000,nan,nan
+envA_v2_small_narrow_medium,iql,20,0.2700,0.0000,0.2700,0.2700,1.0000,0.0000,nan,nan
+envA_v2_large_wide_medium,bc,20,0.4010,0.0102,0.3962,0.4058,1.0000,0.0000,nan,nan
+envA_v2_large_wide_medium,cql,20,0.3990,0.0102,0.3942,0.4038,1.0000,0.0000,nan,nan
+envA_v2_large_wide_medium,iql,20,0.4020,0.0101,0.3973,0.4067,1.0000,0.0000,nan,nan
+envA_v2_large_narrow_medium,bc,20,0.2700,0.0000,0.2700,0.2700,1.0000,0.0000,nan,nan
+envA_v2_large_narrow_medium,cql,20,0.2700,0.0000,0.2700,0.2700,1.0000,0.0000,nan,nan
+envA_v2_large_narrow_medium,iql,20,0.2700,0.0000,0.2700,0.2700,1.0000,0.0000,nan,nan
