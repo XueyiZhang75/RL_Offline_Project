@@ -1,293 +1,300 @@
-# Offline RL：State-Action Coverage 与 Dataset Size 的性能决定权研究
+# Offline RL: Does State-Action Coverage Matter More Than Dataset Size?
 
-## 1. 项目简介
-
-本项目研究 **Offline Reinforcement Learning** 中的一个核心问题：
-
-> **在 Offline RL 中，state-action coverage 是否比 dataset size 更能决定策略的性能上限？**
-
-### 核心研究设计
-
-在离散 gridworld 环境（EnvA_v2，30×30 四走廊迷宫）上构造四类数据集：
-
-| 数据集 | 数据量 | Coverage 宽度 |
-|--------|--------|--------------|
-| small-wide | 5 万条 | 宽（~21% SA 覆盖率） |
-| small-narrow | 5 万条 | 窄（~6% SA 覆盖率） |
-| large-wide | 20 万条 | 宽（~21% SA 覆盖率） |
-| large-narrow | 20 万条 | 窄（~6% SA 覆盖率） |
-
-**核心对照**：small-wide vs large-narrow（数据量更少但 coverage 更广 vs 数据量更大但 coverage 更窄）。
-
-对照算法：BC（行为克隆）、CQL（保守 Q-learning）、IQL（隐式 Q-learning），每组 20 个训练种子。
-
-### 主结论
-
-**coverage 是决定 Offline RL 性能上限的主要因素，dataset size 的独立效应较弱。**
-
-| 算法 | Small-Wide | Large-Narrow | 差值（SW−LN） |
-|------|-----------|--------------|-------------|
-| BC   | 0.3265 | 0.2700 | **+0.057** |
-| CQL  | 0.3970 | 0.2700 | **+0.127** |
-| IQL  | 0.3970 | 0.2700 | **+0.127** |
-
-三个算法均显示 small-wide > large-narrow。固定 narrow coverage 时，将数据量从 5 万增加到 20 万，CQL/IQL 性能提升 Δ ≈ 0.002–0.005，BC 在 narrow coverage 下也无提升（Δ=0）。
-
-### 辅助验证
-
-- **Quality sweep**：数据质量在超过随机门槛后对性能的边际贡献接近于零（BC、IQL），证明 coverage 操纵是主效应变量。
-- **EnvB/C validation**：单路径环境（瓶颈迷宫、钥匙-门迷宫）中 wide/narrow 数据集 SA 覆盖率几乎相同，gap = 0，划定了 coverage 效应的适用边界。
-- **Hopper D4RL benchmark**：验证 BC/IQL/TD3+BC 实现与文献一致，作为外部参照点。
+A study of the relative impact of **state-action coverage** versus **dataset size** on the performance ceiling of Offline Reinforcement Learning algorithms.
 
 ---
 
-## 2. 仓库结构
+## 1. Project Overview
+
+### Research Question
+
+> **In Offline RL, does state-action (SA) coverage determine the policy performance ceiling more than dataset size?**
+
+The core comparison is between two dataset conditions on a discrete gridworld (EnvA_v2, 30×30 four-corridor maze):
+
+| Condition | Transitions | SA Coverage |
+|-----------|------------|-------------|
+| small-wide | 50k | ~21% of all SA pairs |
+| small-narrow | 50k | ~6% of all SA pairs |
+| large-wide | 200k | ~21% of all SA pairs |
+| large-narrow | 200k | ~6% of all SA pairs |
+
+**Primary contrast**: small-wide vs large-narrow — smaller data with broader coverage versus larger data with narrower coverage.
+
+Three algorithms are evaluated on this contrast: BC (Behavior Cloning), CQL (Conservative Q-Learning), and IQL (Implicit Q-Learning), each with 20 training seeds.
+
+### Core Conclusion
+
+**SA coverage is the primary determinant of the Offline RL performance ceiling; the independent effect of dataset size is weak.**
+
+| Algorithm | Small-Wide | Large-Narrow | Gap (SW−LN) |
+|-----------|-----------|--------------|-------------|
+| BC  | 0.3265 | 0.2700 | **+0.057** |
+| CQL | 0.3970 | 0.2700 | **+0.127** |
+| IQL | 0.3970 | 0.2700 | **+0.127** |
+
+All three algorithms show small-wide > large-narrow. When coverage is held fixed at the narrow level, increasing dataset size from 50k to 200k yields no improvement (Δ = 0 for all three algorithms).
+
+### Primary vs Auxiliary Evidence
+
+- **Primary**: EnvA_v2 main experiment — 4-condition factorial (coverage × size), BC/CQL/IQL, 20 seeds each
+- **Auxiliary (quality sweep)**: 5 data quality levels on EnvA_v2 — shows that quality has a threshold effect; above the random floor, further quality improvements yield negligible gains
+- **Auxiliary (EnvB/C validation)**: Cross-environment check on single-path mazes — shows zero coverage gap, delimiting where the coverage effect applies
+- **Auxiliary (Hopper D4RL benchmark)**: Continuous control reference — validates that BC/IQL/TD3+BC implementations match published baselines
+
+---
+
+## 2. Repository Structure
 
 ```
 RL_Final_Project/
-├── envs/                          # 核心环境实现
-│   ├── gridworld_envs.py          # 三个 gridworld 环境定义
+├── envs/                          # Environment implementations
+│   ├── gridworld_envs.py
 │   └── __init__.py
 │
-├── scripts/                       # 所有可执行脚本
-│   ├── final_analysis_and_plots.py        # 最终分析：生成全部表格、图、报告
-│   ├── run_envA_v2_main_experiment.py     # 主实验：BC/CQL × EnvA_v2 × 4 数据集
-│   ├── run_envA_v2_iql_main.py            # IQL 主实验：EnvA_v2 × 4 数据集
-│   ├── run_envA_v2_quality_sweep.py       # BC/CQL quality sweep × 5 档
-│   ├── run_envA_v2_iql_quality_sweep.py   # IQL quality sweep × 5 档
-│   ├── run_envbc_validation.py            # BC/CQL EnvB/C 跨环境验证
-│   ├── run_envbc_iql_validation.py        # IQL EnvB/C 跨环境验证
-│   ├── run_envA_v2_mechanism_analysis.py  # SA coverage 机制分析
-│   ├── run_hopper_benchmark.py            # Hopper D4RL 连续控制 benchmark
-│   ├── generate_envA_v2_final_datasets.py # 生成 EnvA_v2 冻结数据集
-│   ├── build_envA_v2_behavior_pool.py     # 训练行为策略池（DQN）
-│   └── audit_final_datasets.py            # 数据集审计工具
+├── scripts/                       # All executable scripts
+│   ├── final_analysis_and_plots.py        # Main analysis entry point
+│   ├── run_envA_v2_main_experiment.py     # BC/CQL main experiment
+│   ├── run_envA_v2_iql_main.py            # IQL main experiment
+│   ├── run_envA_v2_quality_sweep.py       # BC/CQL quality sweep
+│   ├── run_envA_v2_iql_quality_sweep.py   # IQL quality sweep
+│   ├── run_envbc_validation.py            # BC/CQL cross-environment validation
+│   ├── run_envbc_iql_validation.py        # IQL cross-environment validation
+│   ├── run_envA_v2_mechanism_analysis.py  # SA coverage mechanism analysis
+│   ├── run_hopper_benchmark.py            # Hopper D4RL benchmark
+│   ├── generate_envA_v2_final_datasets.py # Generate frozen datasets
+│   ├── build_envA_v2_behavior_pool.py     # Train behavior policy pool (DQN)
+│   └── audit_final_datasets.py            # Dataset audit tool
 │
-├── tests/                         # 核心功能测试
-│   ├── test_phase1_envs.py                # 基础环境可用性测试
-│   ├── test_envA_v2_structure.py          # EnvA_v2 结构验证
-│   ├── test_envA_v2_final_datasets.py     # 冻结数据集完整性测试
-│   ├── test_envA_v2_main_experiment.py    # 主实验管线 smoke test
-│   ├── test_envA_v2_iql_main.py           # IQL 主实验 smoke test
-│   ├── test_envA_v2_quality_sweep.py      # quality sweep smoke test
-│   ├── test_envA_v2_iql_quality_sweep.py  # IQL quality sweep smoke test
-│   ├── test_envbc_validation.py           # EnvB/C 验证 smoke test
-│   ├── test_envbc_iql_validation.py       # IQL EnvB/C 验证 smoke test
-│   ├── test_envA_v2_mechanism_analysis.py # 机制分析 smoke test
-│   └── test_hopper_benchmark.py           # Hopper benchmark smoke test
+├── tests/                         # Core functional tests
+│   ├── test_phase1_envs.py
+│   ├── test_envA_v2_structure.py
+│   ├── test_envA_v2_final_datasets.py
+│   ├── test_envA_v2_main_experiment.py
+│   ├── test_envA_v2_iql_main.py
+│   ├── test_envA_v2_quality_sweep.py
+│   ├── test_envA_v2_iql_quality_sweep.py
+│   ├── test_envbc_validation.py
+│   ├── test_envbc_iql_validation.py
+│   ├── test_envA_v2_mechanism_analysis.py
+│   └── test_hopper_benchmark.py
 │
 ├── artifacts/
-│   ├── final_datasets/            # 冻结的正式实验数据集（.npz）
-│   ├── final_results/             # 最终结果汇总表（4 个 CSV）
-│   ├── behavior_pool/             # 行为策略池 checkpoint（.pt）
-│   ├── analysis/                  # 机制分析中间数据
-│   ├── training_main/             # BC/CQL 主实验 summary CSV
-│   ├── training_iql/              # IQL 系列 summary CSV
+│   ├── final_datasets/            # Frozen official experiment datasets (.npz)
+│   ├── final_results/             # Final summary tables (4 CSVs)
+│   ├── behavior_pool/             # Behavior policy checkpoints (.pt)
+│   ├── analysis/                  # Mechanism analysis intermediate data
+│   ├── training_main/             # BC/CQL main experiment summary CSV
+│   ├── training_iql/              # IQL series summary CSVs
 │   ├── training_quality/          # Quality sweep summary CSV
-│   ├── training_validation/       # EnvB/C 验证 summary CSV
-│   └── training_benchmark/        # Hopper benchmark summary CSV
+│   ├── training_validation/       # EnvB/C validation summary CSV
+│   └── training_benchmark/        # Hopper benchmark summary CSVs
 │
-├── figures/final/                 # 最终 6 张核心图（.png）
+├── figures/final/                 # All 6 final figures (.png)
 ├── reports/
-│   └── final_project_results.md  # 最终分析报告（含全部结论与解释）
-├── docs/
-│   ├── EXP_PROTOCOL.md            # 实验协议（研究问题、数据集设计、算法范围）
-│   └── PROJECT_SCOPE.md           # 项目边界与必做项定义
+│   └── final_project_results.md  # Final analysis report
 ├── requirements.txt
 └── README.md
 ```
 
 ---
 
-## 3. 关键文件作用说明
+## 3. File-by-File Role Explanation
 
-### 环境（`envs/`）
+### Environment (`envs/`)
 
-- **`envs/gridworld_envs.py`**：定义三个离散 gridworld 环境：
-  - `EnvA_v2`：30×30 四走廊迷宫（主实验环境），670 个可达状态，2680 个 SA 对，观测为 900 维 one-hot 编码。
-  - `EnvB`：15×15 双瓶颈迷宫（跨环境验证，单路径结构）。
-  - `EnvC`：15×15 钥匙-门迷宫（跨环境验证，单路径结构）。
-  - 同文件还定义 `HORIZON`（每轮最长步数）和 `N_ACTIONS`（动作空间大小=4）。
+**`envs/gridworld_envs.py`** — Defines all three discrete gridworld environments:
+- `EnvA_v2`: 30×30 four-corridor maze, the primary experiment environment. Has 670 reachable states and 2,680 SA pairs. Observations are 900-dimensional one-hot vectors (flattened 30×30 grid).
+- `EnvB`: 15×15 double-bottleneck maze used for cross-environment validation. Single-path structure.
+- `EnvC`: 15×15 key-door maze used for cross-environment validation. Single-path structure.
+- Also exports `HORIZON` (max steps per episode) and `N_ACTIONS` (= 4: up/down/left/right).
 
-### 核心脚本（`scripts/`）
+### Scripts (`scripts/`)
 
-- **`final_analysis_and_plots.py`**：主分析入口。读取所有 summary CSV，生成 4 张结果汇总表（`artifacts/final_results/`）、6 张核心图（`figures/final/`）和最终报告（`reports/final_project_results.md`）。**只需运行这一个脚本即可重新生成所有分析输出。**
+**`scripts/final_analysis_and_plots.py`** — The primary analysis entry point. Reads all experiment summary CSVs, produces 4 result tables (`artifacts/final_results/`), 6 figures (`figures/final/`), and the final report (`reports/final_project_results.md`). Running this single script regenerates all analysis outputs without rerunning any experiments.
 
-- **`run_envA_v2_main_experiment.py`**：EnvA_v2 主实验（BC + CQL × 4 数据集 × 20 seeds），结果写入 `artifacts/training_main/envA_v2_main_summary.csv`。
+**`scripts/run_envA_v2_main_experiment.py`** — Runs the BC and CQL main experiment on EnvA_v2 across all 4 dataset conditions × 20 seeds. Output: `artifacts/training_main/envA_v2_main_summary.csv`.
 
-- **`run_envA_v2_iql_main.py`**：EnvA_v2 IQL 主实验（4 数据集 × 20 seeds），结果写入 `artifacts/training_iql/envA_v2_iql_main_summary.csv`。
+**`scripts/run_envA_v2_iql_main.py`** — Runs the IQL main experiment on EnvA_v2 across all 4 dataset conditions × 20 seeds. Output: `artifacts/training_iql/envA_v2_iql_main_summary.csv`.
 
-- **`run_envA_v2_quality_sweep.py`**：BC/CQL quality sweep（5 质量档 × 20 seeds），结果写入 `artifacts/training_quality/envA_v2_quality_summary.csv`。
+**`scripts/run_envA_v2_quality_sweep.py`** — Runs BC and CQL across 5 data quality levels (random / suboptimal / medium / expert / mixed) × 20 seeds. Output: `artifacts/training_quality/envA_v2_quality_summary.csv`.
 
-- **`run_envA_v2_iql_quality_sweep.py`**：IQL quality sweep（5 质量档 × 20 seeds），结果写入 `artifacts/training_iql/envA_v2_iql_quality_sweep_summary.csv`。
+**`scripts/run_envA_v2_iql_quality_sweep.py`** — Runs IQL across the same 5 quality levels × 20 seeds. Output: `artifacts/training_iql/envA_v2_iql_quality_sweep_summary.csv`.
 
-- **`run_envbc_validation.py`**：BC/CQL 在 EnvB/EnvC 上的跨环境验证（各 2 数据集 × 20 seeds），结果写入 `artifacts/training_validation/envbc_validation_summary.csv`。
+**`scripts/run_envbc_validation.py`** — Runs BC and CQL on EnvB and EnvC (2 dataset conditions × 20 seeds each). Output: `artifacts/training_validation/envbc_validation_summary.csv`.
 
-- **`run_envbc_iql_validation.py`**：IQL 在 EnvB/EnvC 上的跨环境验证，结果写入 `artifacts/training_iql/envbc_iql_validation_summary.csv`。
+**`scripts/run_envbc_iql_validation.py`** — Runs IQL on EnvB and EnvC cross-environment validation. Output: `artifacts/training_iql/envbc_iql_validation_summary.csv`.
 
-- **`run_envA_v2_mechanism_analysis.py`**：计算每个 training run 的 SA coverage 指标和 OOD action rate，结果写入 `artifacts/analysis/`。
+**`scripts/run_envA_v2_mechanism_analysis.py`** — Computes per-run SA coverage metrics and OOD action rates for each experiment run, linking coverage to performance. Output: `artifacts/analysis/`.
 
-- **`run_hopper_benchmark.py`**：Hopper-v2 D4RL benchmark（BC/CQL/IQL/TD3+BC × 3 数据集 × 5 seeds），使用 d3rlpy，结果写入 `artifacts/training_benchmark/hopper_benchmark_summary.csv`。
+**`scripts/run_hopper_benchmark.py`** — Runs BC, CQL, IQL, and TD3+BC on Hopper-v2 (3 D4RL dataset splits × 5 seeds) using d3rlpy. Output: `artifacts/training_benchmark/hopper_benchmark_summary.csv`.
 
-- **`generate_envA_v2_final_datasets.py`**：基于行为策略池生成 EnvA_v2 的 9 个冻结数据集（4 主实验 + 5 quality 档），写入 `artifacts/final_datasets/`。
+**`scripts/generate_envA_v2_final_datasets.py`** — Uses the trained behavior policy pool to generate all 9 frozen EnvA_v2 datasets (4 main experiment conditions + 5 quality sweep variants). Output: `artifacts/final_datasets/`.
 
-- **`build_envA_v2_behavior_pool.py`**：用 DQN 训练 8×3 行为策略（expert/medium/suboptimal 各 8 个 seed），checkpoint 写入 `artifacts/behavior_pool/`。
+**`scripts/build_envA_v2_behavior_pool.py`** — Trains 24 DQN behavior policies (3 quality levels × 8 seeds) for EnvA_v2. Output: `artifacts/behavior_pool/`.
 
-- **`audit_final_datasets.py`**：验证冻结数据集的 SA coverage、数据量、转移质量，生成审计报告。
+**`scripts/audit_final_datasets.py`** — Validates frozen dataset SA coverage, transition count, and quality against design specifications.
 
-### 测试（`tests/`）
+### Tests (`tests/`)
 
-- **`test_phase1_envs.py`**：基础验证三个环境可以正常 step/reset、返回合法 obs 和 reward。
-- **`test_envA_v2_structure.py`**：验证 EnvA_v2 可达状态数、SA 覆盖率上限、地图形状等结构属性。
-- **`test_envA_v2_final_datasets.py`**：验证 9 个冻结数据集的形状、数据量和 SA coverage 是否符合设计规格。
-- **`test_envA_v2_main_experiment.py`**：主实验脚本的端到端 smoke test（少量 seeds，快速验证管线可通）。
-- **`test_envA_v2_iql_main.py`**：IQL 主实验管线 smoke test。
-- **`test_envA_v2_quality_sweep.py` / `test_envA_v2_iql_quality_sweep.py`**：quality sweep 管线 smoke test。
-- **`test_envbc_validation.py` / `test_envbc_iql_validation.py`**：EnvB/C 验证管线 smoke test。
-- **`test_envA_v2_mechanism_analysis.py`**：机制分析管线 smoke test。
-- **`test_hopper_benchmark.py`**：Hopper benchmark 管线 smoke test。
+**`tests/test_phase1_envs.py`** — Verifies all three environments accept valid actions, return correct observation shapes, and terminate correctly.
 
-### 数据与结果（`artifacts/`）
+**`tests/test_envA_v2_structure.py`** — Validates EnvA_v2 structural properties: number of reachable states, SA pair count, corridor topology.
 
-- **`artifacts/final_datasets/`**：9 个冻结的正式 `.npz` 数据集（EnvA_v2 四格主实验 + 5 quality 档 + EnvB/C 验证共 13 文件），是全部实验的数据基础。
-- **`artifacts/final_results/`**：最终 4 张汇总表：
-  - `final_discrete_results_master_table.csv`：主实验结果（BC/CQL/IQL × 4 数据集，含 mean/std/95% CI）
-  - `final_quality_results_table.csv`：quality sweep 结果
-  - `final_validation_results_table.csv`：EnvB/C 跨环境验证结果
-  - `final_benchmark_results_table.csv`：Hopper benchmark 结果
-- **`artifacts/behavior_pool/`**：40 个行为策略 `.pt` checkpoint，用于重新生成数据集。
-- **`artifacts/analysis/`**：机制分析输出，包含 seed 级别的 SA coverage 和 OOD rate 指标。
-- **`artifacts/training_*/`**：各实验阶段的 summary CSV（原始 per-run 结果汇总，`final_analysis_and_plots.py` 的输入源）。
+**`tests/test_envA_v2_final_datasets.py`** — Checks all 9 frozen `.npz` datasets for shape, transition count, and SA coverage against design specs.
 
-### 图与报告
+**`tests/test_envA_v2_main_experiment.py`** — End-to-end smoke test for the BC/CQL main experiment pipeline (small seed count, fast).
 
-- **`figures/final/`**：6 张核心图：
-  - `fig1_main_coverage_vs_size.png`：四格矩阵总结果图（coverage × size 双因素）
-  - `fig2_core_smallwide_vs_largenarrow.png`：核心对照图（small high-coverage vs large low-coverage）
-  - `fig3_quality_modulation.png`：quality 调制结果图
-  - `fig4_envbc_validation.png`：EnvB/C 跨环境验证图
-  - `fig5_mechanism_summary.png`：SA coverage 机制分析图
-  - `fig6_benchmark_validation.png`：Hopper benchmark 趋势图
+**`tests/test_envA_v2_iql_main.py`** — End-to-end smoke test for the IQL main experiment pipeline.
 
-- **`reports/final_project_results.md`**：最终分析报告。包含完整的主结论、数据表、辅助验证解释、机制分析、局限性说明。**建议优先阅读此文件。**
+**`tests/test_envA_v2_quality_sweep.py`** / **`test_envA_v2_iql_quality_sweep.py`** — Smoke tests for the quality sweep pipeline (BC/CQL and IQL respectively).
 
-### 协议文档（`docs/`）
+**`tests/test_envbc_validation.py`** / **`test_envbc_iql_validation.py`** — Smoke tests for the EnvB/C cross-environment validation pipeline.
 
-- **`docs/EXP_PROTOCOL.md`**：实验协议，定义研究问题、数据集设计规格（size/coverage 正交矩阵）、算法范围。
-- **`docs/PROJECT_SCOPE.md`**：项目边界，定义必做项与非必做项。
+**`tests/test_envA_v2_mechanism_analysis.py`** — Smoke test for the mechanism analysis pipeline.
+
+**`tests/test_hopper_benchmark.py`** — Smoke test for the Hopper benchmark pipeline.
+
+### Data and Results (`artifacts/`)
+
+**`artifacts/final_datasets/`** — 13 frozen `.npz` dataset files: 4 main experiment conditions for EnvA_v2, 5 quality sweep variants for EnvA_v2, and 2 conditions each for EnvB and EnvC. These are the inputs to all training experiments.
+
+**`artifacts/final_results/`** — 4 final summary tables:
+- `final_discrete_results_master_table.csv`: Main experiment results (BC/CQL/IQL × 4 conditions, with mean/std/95% CI)
+- `final_quality_results_table.csv`: Quality sweep results
+- `final_validation_results_table.csv`: EnvB/C cross-environment validation results
+- `final_benchmark_results_table.csv`: Hopper D4RL benchmark results
+
+**`artifacts/behavior_pool/`** — 40 trained DQN policy checkpoints used to generate the frozen datasets. Also includes `behavior_policy_catalog.csv` and `envA_v2_controller_eval.csv`.
+
+**`artifacts/analysis/`** — Output from mechanism analysis: `envA_v2_mechanism_summary.csv` and per-seed metrics `envA_v2_mechanism_seed_metrics.csv`.
+
+**`artifacts/training_*/`** — Per-experiment summary CSVs produced by the training scripts. These are the source data for `final_analysis_and_plots.py`.
+
+### Figures (`figures/final/`)
+
+- **`fig1_main_coverage_vs_size.png`** — Four-condition matrix: mean return across all coverage × size combinations for BC, CQL, and IQL.
+- **`fig2_core_smallwide_vs_largenarrow.png`** — Core contrast bar chart: small-wide vs large-narrow across all three algorithms.
+- **`fig3_quality_modulation.png`** — Quality sweep results showing the threshold effect and quality insensitivity above the random floor.
+- **`fig4_envbc_validation.png`** — EnvB/C cross-environment validation showing zero wide/narrow gap due to single-path structure.
+- **`fig5_mechanism_summary.png`** — SA coverage vs mean return scatter, illustrating the mechanism linking coverage to performance.
+- **`fig6_benchmark_validation.png`** — Hopper D4RL benchmark results for external reference validation.
+
+### Report (`reports/`)
+
+**`reports/final_project_results.md`** — Full final analysis report. Contains the complete research conclusions, data tables, interpretation of all experiments, mechanism analysis, and limitations. **Recommended first read.**
 
 ---
 
-## 4. 环境与依赖
+## 4. Environment and Dependencies
 
-**Python 版本**：3.10 或以上（开发环境 3.12.2）
+**Python**: 3.10 or higher (developed on 3.12.2)
 
-**安装依赖**：
+**Install dependencies:**
 
 ```bash
 pip install -r requirements.txt
 ```
 
-**关键依赖**：
+**Key libraries:**
 
-| 库 | 用途 |
-|----|------|
-| `torch >= 2.0` | BC/CQL/IQL 神经网络训练 |
-| `numpy >= 1.24` | 数组操作、数据集处理 |
-| `matplotlib >= 3.7` | 图表生成 |
-| `scipy >= 1.10` | 统计检验（95% 置信区间） |
-| `d3rlpy >= 2.0` | Hopper benchmark（连续控制算法） |
-| `gymnasium >= 0.29` | Hopper-v2 环境（benchmark 用） |
-| `h5py >= 3.8` | D4RL HDF5 数据文件读取（benchmark 用） |
+| Library | Purpose |
+|---------|---------|
+| `torch >= 2.0` | Neural network training for BC / CQL / IQL |
+| `numpy >= 1.24` | Array operations, dataset handling |
+| `matplotlib >= 3.7` | Figure generation |
+| `scipy >= 1.10` | Statistical tests (95% confidence intervals) |
+| `d3rlpy >= 2.0` | Continuous control algorithms for Hopper benchmark |
+| `gymnasium >= 0.29` | Hopper-v2 environment (benchmark only) |
+| `h5py >= 3.8` | D4RL HDF5 dataset loading (benchmark only) |
 
-> 说明：`d3rlpy`、`gymnasium`、`h5py` 仅 Hopper benchmark（`run_hopper_benchmark.py`）需要。若只关心离散主线实验，可不安装这三个库。
+> Note: `d3rlpy`, `gymnasium`, and `h5py` are only required for the Hopper benchmark script (`run_hopper_benchmark.py`). For the discrete gridworld main line, only `torch`, `numpy`, `matplotlib`, and `scipy` are needed.
 
 ---
 
-## 5. 复现步骤
+## 5. Step-by-Step Reproduction
 
-### Option A：只查看最终结果（无需运行任何代码）
+### Option A — Inspect final results (no code required)
 
-所有最终结果均已预计算并保存在仓库中：
+All results are precomputed and included in the repository.
 
-1. 阅读 `reports/final_project_results.md` — 完整分析报告（推荐首先看这里）
-2. 查看 `artifacts/final_results/` — 4 张汇总 CSV 表
-3. 查看 `figures/final/` — 6 张核心图
+- **Step 1**: Read `reports/final_project_results.md` for the complete analysis report (recommended starting point).
+- **Step 2**: Open `artifacts/final_results/` to inspect the 4 summary CSV tables.
+- **Step 3**: Open `figures/final/` to view the 6 final figures.
 
-### Option B：重新生成分析输出（表格 + 图 + 报告）
+### Option B — Regenerate all analysis outputs (tables + figures + report)
 
-不需要重跑任何实验，只从已有 summary CSV 重新生成所有分析产物：
+This does not rerun any experiments. It reads existing summary CSVs and reproduces all outputs.
 
 ```bash
-# Step 1: 安装依赖
+# Step 1: Install core dependencies
 pip install torch numpy matplotlib scipy
 
-# Step 2: 运行最终分析脚本
+# Step 2: Run the final analysis script
 python scripts/final_analysis_and_plots.py
 ```
 
-输出写入 `artifacts/final_results/`、`figures/final/`、`reports/final_project_results.md`。
+Outputs are written to `artifacts/final_results/`, `figures/final/`, and `reports/final_project_results.md`.
 
-### Option C：重跑主实验（需要 GPU，耗时较长）
+### Option C — Rerun experiments (GPU required; time-intensive)
 
-> **注意**：重跑实验需要完整 GPU 环境，EnvA_v2 主实验约需数小时。
-> 所有训练脚本均支持断点续跑（逐 run append 模式）。
+> **Warning**: Full experiment reruns require a GPU and take several hours for the main experiment alone. All training scripts support resumable append mode (each seed is written individually; completed seeds are skipped on re-run).
 
-**Step 1**：确认冻结数据集已存在
+**Step 1**: Verify frozen datasets exist.
 
 ```bash
 ls artifacts/final_datasets/
-# 应看到 13 个 .npz 文件
+# Should show 13 .npz files
 ```
 
-若数据集缺失，可重新生成（需要行为策略池 checkpoint）：
+If datasets are missing, regenerate them (requires behavior pool checkpoints):
 
 ```bash
-python scripts/build_envA_v2_behavior_pool.py   # 训练行为策略池
-python scripts/generate_envA_v2_final_datasets.py  # 生成数据集
+python scripts/build_envA_v2_behavior_pool.py    # Train DQN behavior policies
+python scripts/generate_envA_v2_final_datasets.py # Generate frozen datasets
 ```
 
-**Step 2**：运行 BC/CQL 主实验
+**Step 2**: Run the BC/CQL main experiment.
 
 ```bash
 python scripts/run_envA_v2_main_experiment.py
 ```
 
-**Step 3**：运行 IQL 主实验
+**Step 3**: Run the IQL main experiment.
 
 ```bash
 python scripts/run_envA_v2_iql_main.py
 ```
 
-**Step 4**：运行 quality sweep
+**Step 4**: Run quality sweep experiments.
 
 ```bash
 python scripts/run_envA_v2_quality_sweep.py
 python scripts/run_envA_v2_iql_quality_sweep.py
 ```
 
-**Step 5**：运行 EnvB/C 跨环境验证
+**Step 5**: Run cross-environment validation.
 
 ```bash
 python scripts/run_envbc_validation.py
 python scripts/run_envbc_iql_validation.py
 ```
 
-**Step 6**：运行机制分析
+**Step 6**: Run mechanism analysis.
 
 ```bash
 python scripts/run_envA_v2_mechanism_analysis.py
 ```
 
-**Step 7**（可选）：运行 Hopper D4RL benchmark
+**Step 7 (optional)**: Run Hopper D4RL benchmark.
 
 ```bash
-# 需要额外依赖：d3rlpy, gymnasium, h5py
-# 需要下载 Hopper D4RL 数据集（运行时自动下载，或手动放入 artifacts/training_benchmark/d4rl_cache/）
+# Requires: d3rlpy, gymnasium, h5py
+# D4RL dataset files are downloaded automatically on first run
 python scripts/run_hopper_benchmark.py
 ```
 
-**Step 8**：重新生成最终分析输出
+**Step 8**: Regenerate final analysis outputs.
 
 ```bash
 python scripts/final_analysis_and_plots.py
@@ -295,94 +302,102 @@ python scripts/final_analysis_and_plots.py
 
 ---
 
-## 6. 关键脚本命令速查
+## 6. Key Script Commands
 
 ```bash
-# 最终分析（最重要）——从已有 summary CSV 生成所有表格、图、报告
+# Regenerate all tables, figures, and the final report from existing CSVs
 python scripts/final_analysis_and_plots.py
 
-# BC/CQL 主实验（EnvA_v2 × 4 数据集 × 20 seeds）
+# BC/CQL main experiment — EnvA_v2, 4 conditions × 20 seeds
 python scripts/run_envA_v2_main_experiment.py
 
-# IQL 主实验（EnvA_v2 × 4 数据集 × 20 seeds）
+# IQL main experiment — EnvA_v2, 4 conditions × 20 seeds
 python scripts/run_envA_v2_iql_main.py
 
-# BC/CQL quality sweep（5 质量档 × 20 seeds）
+# BC/CQL quality sweep — 5 quality levels × 20 seeds
 python scripts/run_envA_v2_quality_sweep.py
 
-# IQL quality sweep（5 质量档 × 20 seeds）
+# IQL quality sweep — 5 quality levels × 20 seeds
 python scripts/run_envA_v2_iql_quality_sweep.py
 
-# BC/CQL EnvB/C 跨环境验证（各 2 数据集 × 20 seeds）
+# BC/CQL cross-environment validation — EnvB + EnvC, 2 conditions × 20 seeds
 python scripts/run_envbc_validation.py
 
-# IQL EnvB/C 跨环境验证
+# IQL cross-environment validation — EnvB + EnvC
 python scripts/run_envbc_iql_validation.py
 
-# SA coverage 机制分析
+# SA coverage mechanism analysis
 python scripts/run_envA_v2_mechanism_analysis.py
 
-# Hopper benchmark（需 d3rlpy/gymnasium）
+# Hopper D4RL benchmark (requires d3rlpy / gymnasium)
 python scripts/run_hopper_benchmark.py
 
-# 运行核心测试（不运行完整实验，快速 smoke test）
+# Run all smoke tests
 python -m pytest tests/ -v
 ```
 
 ---
 
-## 7. 最终输出说明
+## 7. Final Outputs
 
-| 文件 | 位置 | 内容 |
-|------|------|------|
-| 最终分析报告 | `reports/final_project_results.md` | 完整研究结论、数据、解释、局限性 |
-| 主实验结果表 | `artifacts/final_results/final_discrete_results_master_table.csv` | BC/CQL/IQL × 4 数据集，mean/std/95% CI |
-| Quality sweep 结果表 | `artifacts/final_results/final_quality_results_table.csv` | 5 质量档 × 3 算法 |
-| 跨环境验证表 | `artifacts/final_results/final_validation_results_table.csv` | EnvB/C × 3 算法 |
-| Benchmark 结果表 | `artifacts/final_results/final_benchmark_results_table.csv` | Hopper × 4 算法 |
-| 核心对照图 | `figures/final/fig2_core_smallwide_vs_largenarrow.png` | small-wide vs large-narrow 主结论图 |
-| 四格矩阵图 | `figures/final/fig1_main_coverage_vs_size.png` | coverage × size 双因素结果 |
-| Quality 调制图 | `figures/final/fig3_quality_modulation.png` | 数据质量门槛效应 |
-| EnvB/C 验证图 | `figures/final/fig4_envbc_validation.png` | 跨环境 zero-gap 结果 |
-| 机制分析图 | `figures/final/fig5_mechanism_summary.png` | SA coverage 与性能的对应关系 |
-| Benchmark 图 | `figures/final/fig6_benchmark_validation.png` | Hopper D4RL 趋势参照 |
+| File | Location | Description |
+|------|----------|-------------|
+| Final analysis report | `reports/final_project_results.md` | Complete conclusions, tables, interpretation |
+| Main experiment table | `artifacts/final_results/final_discrete_results_master_table.csv` | BC/CQL/IQL × 4 conditions, mean/std/95% CI |
+| Quality sweep table | `artifacts/final_results/final_quality_results_table.csv` | 5 quality levels × 3 algorithms |
+| Validation table | `artifacts/final_results/final_validation_results_table.csv` | EnvB/C × 3 algorithms |
+| Benchmark table | `artifacts/final_results/final_benchmark_results_table.csv` | Hopper × 4 algorithms |
+| Core contrast figure | `figures/final/fig2_core_smallwide_vs_largenarrow.png` | Primary conclusion visualization |
+| Four-condition matrix | `figures/final/fig1_main_coverage_vs_size.png` | Coverage × size double-factor results |
+| Quality modulation figure | `figures/final/fig3_quality_modulation.png` | Quality threshold effect |
+| Cross-env validation figure | `figures/final/fig4_envbc_validation.png` | EnvB/C zero-gap result |
+| Mechanism figure | `figures/final/fig5_mechanism_summary.png` | SA coverage vs performance |
+| Benchmark figure | `figures/final/fig6_benchmark_validation.png` | Hopper D4RL reference trends |
 
-**建议阅读顺序**：`reports/final_project_results.md` → `fig2` → `fig1` → `fig3` → `fig4` → `fig5` → `fig6`
-
----
-
-## 8. 当前问题与局限
-
-### 环境结构导致的局限
-
-1. **EnvB/C 单路径结构**：EnvB（双瓶颈）和 EnvC（钥匙-门）都是单路径结构，任何策略必须经过相同关键节点，导致 wide/narrow 数据集的 SA 覆盖率几乎相同（EnvB ≈ 99%）。wide vs narrow 的 gap 为 0，无法形成有效 coverage 对照。**结论：coverage 效应需要环境中存在多条可选路径。EnvB/C 未能实现跨环境泛化验证。**
-
-2. **环境规模偏小**：EnvA_v2 共 2680 个 SA 对，即使 narrow 数据集也覆盖了测试轨迹的大多数状态，导致 OOD action rate 在所有条件下均为 0.000。无法直接观测分布偏移（distribution shift）效应，"coverage 约束 OOD 风险"的机制路径在此环境中不可见。
-
-3. **离散动作空间限制**：IQL 和 TD3+BC 的连续控制版本未纳入离散主线实验（离散环境不适用连续控制算法的原始实现）。
-
-### Benchmark 配置导致的局限
-
-4. **CQL 连续控制配置未针对 D4RL 调优**：Hopper benchmark 中 CQL 的 `cql_alpha` 等超参数使用默认值（`batch_size=256`，未按 D4RL 标准调参），导致 normalized score 仅 1–3，远低于文献报告的 ~58。**此异常不影响离散主线结论**，因为离散 CQL 的配置是独立调优的。
-
-5. **Benchmark 仅 5 个种子**：统计置信度低于离散主线（20 seeds），Hopper 结果仅作趋势参照，不作为精确基准。
-
-### 结论的解释边界
-
-- **主结论适用范围**：coverage 效应在 EnvA_v2（多路径离散 gridworld）上得到三算法 20-seed 验证。能否推广至连续控制环境或更大规模环境，需进一步实验。
-- **BC 的 size 效应**：BC 在 wide coverage 条件下存在 Δ=+0.0745 的 size 效应，说明 size 并非完全无效——其效应大小依赖算法和 coverage 条件的交互。
+**Recommended reading order**: `reports/final_project_results.md` → `fig2` → `fig1` → `fig3` → `fig4` → `fig5` → `fig6`
 
 ---
 
-## 9. 公开版说明
+## 8. Current Issues and Limitations
 
-本仓库为项目最终公开整理版。已移除以下内容：
+### Limitations from Environment Structure
 
-- 所有中间开发阶段文件（archive/）
-- 所有训练 checkpoint（训练主实验 `.pt` 文件，共约 2.2 GB）
-- 内部开发协议文件（clean restart 计划、patch 链协议等）
-- 原始 D4RL HDF5 缓存文件（可运行时自动下载）
-- 调试脚本、诊断脚本、sanity 脚本、pilot 脚本
-- Python 缓存文件（`__pycache__`、`.pyc`、`.pytest_cache`）
+**1. EnvB/C single-path structure invalidates cross-environment generalization.**
+EnvB (double-bottleneck) and EnvC (key-door) both have single-path layouts where any policy must pass through the same critical nodes. This makes the SA coverage of wide and narrow datasets nearly identical (EnvB ≈ 99% coverage). The wide vs narrow gap is 0.000 for all algorithms on both environments. The cross-environment validation does not provide a meaningful coverage contrast; it only confirms that the training pipeline runs correctly on other environments and delimits where the coverage effect applies (multi-path environments).
 
-保留的是主线实验所需的最小必要内容：环境代码、训练脚本、测试文件、冻结数据集、summary CSV、最终图表与报告。
+**2. Environment scale too small to observe distribution shift.**
+EnvA_v2 has only 2,680 SA pairs. Even the narrow dataset covers most states encountered during evaluation trajectories. OOD (out-of-distribution) action rate is 0.000 under all experimental conditions. The mechanism by which coverage constrains performance cannot be attributed to distribution shift in this setting; coverage acts instead by limiting the diversity of accessible state-action pairs during learning.
+
+**3. Discrete action space excludes continuous control algorithms from the main line.**
+IQL and TD3+BC in their original continuous-control formulations are not directly applicable to the discrete gridworld. The Hopper benchmark serves as a separate validation track rather than as part of the coverage study.
+
+### Limitations from Benchmark Configuration
+
+**4. CQL is not properly tuned for the D4RL Hopper benchmark.**
+The Hopper benchmark uses default CQL hyperparameters (`batch_size=256`, `cql_alpha` not tuned for D4RL). This produces normalized scores of 1–3, far below the published value of ~58. This anomaly does not affect the discrete main-line conclusions — the discrete CQL configuration was tuned independently — but the benchmark CQL results should not be used as a reference.
+
+**5. Hopper benchmark uses only 5 seeds.**
+Statistical confidence is lower than the discrete main line (20 seeds). Hopper results are provided as directional reference only.
+
+### Interpretation Boundaries
+
+**6. Main conclusion is specific to multi-path discrete environments.**
+The coverage advantage of small-wide over large-narrow is validated on EnvA_v2 (four-corridor, 30×30 discrete gridworld). Whether this finding generalizes to continuous control, higher-dimensional state spaces, or environments with different topology requires further study.
+
+**7. BC shows a non-negligible size effect under wide coverage.**
+BC achieves a gain of Δ=+0.0745 when moving from small-wide to large-wide, indicating that dataset size is not irrelevant for BC when coverage is already broad. The conclusion that size matters less than coverage holds directionally but the magnitude of the size effect is algorithm-dependent.
+
+---
+
+## 9. Public Release Note
+
+This repository is a cleaned public release of the project. The following categories of content have been excluded from the GitHub version:
+
+- All intermediate development history and archived scripts
+- All per-run training checkpoints (~2.2 GB of `.pt` files)
+- Raw D4RL HDF5 cache files
+- Internal development protocol documents
+- Diagnostic, sanity-check, and pilot scripts
+- Python cache files (`__pycache__`, `.pyc`, `.pytest_cache`)
+
+What is retained is the minimum necessary to understand, verify, and reproduce the core results: environment code, training scripts, test suite, frozen datasets, experiment summary CSVs, final figures, and the analysis report.
