@@ -354,7 +354,7 @@ python -m pytest tests/ -v
 | Mechanism figure | `figures/final/fig5_mechanism_summary.png` | SA coverage vs performance |
 | Benchmark figure | `figures/final/fig6_benchmark_validation.png` | Hopper D4RL reference trends |
 
-**Recommended reading order**: `reports/final_project_results.md` → `fig2` → `fig1` → `fig3` → `fig4` → `fig5` → `fig6`
+**Recommended reading order**: `reports/final_project_results.md` > `fig2` > `fig1` > `fig3` > `fig4` > `fig5` > `fig6`
 
 ---
 
@@ -387,17 +387,3 @@ The coverage advantage of small-wide over large-narrow is validated on EnvA_v2 (
 **7. BC shows a non-negligible size effect under wide coverage.**
 BC achieves a gain of Δ=+0.0745 when moving from small-wide to large-wide, indicating that dataset size is not irrelevant for BC when coverage is already broad. The conclusion that size matters less than coverage holds directionally but the magnitude of the size effect is algorithm-dependent.
 
----
-
-## 9. Public Release Note
-
-This repository is a cleaned public release of the project. The following categories of content have been excluded from the GitHub version:
-
-- All intermediate development history and archived scripts
-- All per-run training checkpoints (~2.2 GB of `.pt` files)
-- Raw D4RL HDF5 cache files
-- Internal development protocol documents
-- Diagnostic, sanity-check, and pilot scripts
-- Python cache files (`__pycache__`, `.pyc`, `.pytest_cache`)
-
-What is retained is the minimum necessary to understand, verify, and reproduce the core results: environment code, training scripts, test suite, frozen datasets, experiment summary CSVs, final figures, and the analysis report.
