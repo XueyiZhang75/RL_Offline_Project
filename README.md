@@ -64,7 +64,10 @@ RL_Final_Project/
 │   ├── run_hopper_benchmark.py            # Hopper D4RL benchmark
 │   ├── generate_envA_v2_final_datasets.py # Generate frozen datasets
 │   ├── build_envA_v2_behavior_pool.py     # Train behavior policy pool (DQN)
-│   └── audit_final_datasets.py            # Dataset audit tool
+│   ├── audit_final_datasets.py            # Dataset audit tool
+│   ├── run_envA_v2_sanity.py              # [shared lib] BC/CQL training infrastructure
+│   ├── run_envA_v2_iql_sanity.py          # [shared lib] IQL training infrastructure
+│   └── verify_envA_v2_proxy_gate.py       # [shared lib] Corridor structure & controllers
 │
 ├── tests/                         # Core functional tests
 │   ├── test_phase1_envs.py
@@ -134,6 +137,12 @@ RL_Final_Project/
 **`scripts/build_envA_v2_behavior_pool.py`** — Trains 24 DQN behavior policies (3 quality levels × 8 seeds) for EnvA_v2. Output: `artifacts/behavior_pool/`.
 
 **`scripts/audit_final_datasets.py`** — Validates frozen dataset SA coverage, transition count, and quality against design specifications.
+
+**`scripts/run_envA_v2_sanity.py`** — Shared training infrastructure library imported by all BC/CQL experiment scripts. Defines the frozen `BC_CFG`, `CQL_CFG`, `MLP` architecture, `encode_obs`, `load_dataset`, `train_bc`, `train_cql`, and `evaluate`. Not an entry-point script — it is a shared module.
+
+**`scripts/run_envA_v2_iql_sanity.py`** — Shared IQL infrastructure library imported by all IQL experiment scripts. Defines the frozen `IQL_CFG`, `train_iql`, `save_iql_checkpoint`, and `load_iql_checkpoint`. Not an entry-point script — it is a shared module.
+
+**`scripts/verify_envA_v2_proxy_gate.py`** — Corridor structure and scripted controller library for EnvA_v2. Defines the four-corridor route families (`FAMILIES`, `SEED_FAMILY_MAP`, `TOUR_WAYPOINTS`), the BFS-based action table builder (`get_table`), and the delay action sampler (`get_delay_action`). Required by `build_envA_v2_behavior_pool.py` and `generate_envA_v2_final_datasets.py`. Not an entry-point script — it is a shared module.
 
 ### Tests (`tests/`)
 
