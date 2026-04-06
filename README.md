@@ -263,11 +263,15 @@ python scripts/build_envA_v2_behavior_pool.py    # Train DQN behavior policies
 python scripts/generate_envA_v2_final_datasets.py # Generate frozen datasets
 ```
 
+> Note: `build_envA_v2_behavior_pool.py` depends on `verify_envA_v2_proxy_gate.py` (corridor structure); `generate_envA_v2_final_datasets.py` also depends on it. Both dependencies are present in `scripts/`.
+
 **Step 2**: Run the BC/CQL main experiment.
 
 ```bash
 python scripts/run_envA_v2_main_experiment.py
 ```
+
+> Depends on `run_envA_v2_sanity.py` (shared BC/CQL infrastructure). Output: `artifacts/training_main/envA_v2_main_summary.csv`.
 
 **Step 3**: Run the IQL main experiment.
 
@@ -275,18 +279,20 @@ python scripts/run_envA_v2_main_experiment.py
 python scripts/run_envA_v2_iql_main.py
 ```
 
+> Depends on `run_envA_v2_iql_sanity.py` (shared IQL infrastructure) and `run_envA_v2_sanity.py`. Output: `artifacts/training_iql/envA_v2_iql_main_summary.csv`.
+
 **Step 4**: Run quality sweep experiments.
 
 ```bash
-python scripts/run_envA_v2_quality_sweep.py
-python scripts/run_envA_v2_iql_quality_sweep.py
+python scripts/run_envA_v2_quality_sweep.py       # depends on run_envA_v2_sanity.py
+python scripts/run_envA_v2_iql_quality_sweep.py   # depends on run_envA_v2_iql_sanity.py
 ```
 
 **Step 5**: Run cross-environment validation.
 
 ```bash
-python scripts/run_envbc_validation.py
-python scripts/run_envbc_iql_validation.py
+python scripts/run_envbc_validation.py            # depends on run_envA_v2_sanity.py
+python scripts/run_envbc_iql_validation.py        # depends on run_envA_v2_iql_sanity.py
 ```
 
 **Step 6**: Run mechanism analysis.
@@ -314,36 +320,60 @@ python scripts/final_analysis_and_plots.py
 ## 6. Key Script Commands
 
 ```bash
+# ── Analysis (no experiment rerun needed) ────────────────────────────────────
 # Regenerate all tables, figures, and the final report from existing CSVs
 python scripts/final_analysis_and_plots.py
 
+# ── Main experiments ─────────────────────────────────────────────────────────
 # BC/CQL main experiment — EnvA_v2, 4 conditions × 20 seeds
+# (imports shared library: run_envA_v2_sanity.py)
 python scripts/run_envA_v2_main_experiment.py
 
 # IQL main experiment — EnvA_v2, 4 conditions × 20 seeds
+# (imports shared libraries: run_envA_v2_iql_sanity.py, run_envA_v2_sanity.py)
 python scripts/run_envA_v2_iql_main.py
 
+# ── Quality sweep ─────────────────────────────────────────────────────────────
 # BC/CQL quality sweep — 5 quality levels × 20 seeds
+# (imports shared library: run_envA_v2_sanity.py)
 python scripts/run_envA_v2_quality_sweep.py
 
 # IQL quality sweep — 5 quality levels × 20 seeds
+# (imports shared library: run_envA_v2_iql_sanity.py)
 python scripts/run_envA_v2_iql_quality_sweep.py
 
-# BC/CQL cross-environment validation — EnvB + EnvC, 2 conditions × 20 seeds
+# ── Cross-environment validation ─────────────────────────────────────────────
+# BC/CQL EnvB + EnvC — 2 conditions × 20 seeds
+# (imports shared library: run_envA_v2_sanity.py)
 python scripts/run_envbc_validation.py
 
-# IQL cross-environment validation — EnvB + EnvC
+# IQL EnvB + EnvC validation
+# (imports shared library: run_envA_v2_iql_sanity.py)
 python scripts/run_envbc_iql_validation.py
 
-# SA coverage mechanism analysis
+# ── Mechanism analysis ────────────────────────────────────────────────────────
+# SA coverage analysis — reads existing checkpoints
+# (imports shared library: run_envA_v2_sanity.py)
 python scripts/run_envA_v2_mechanism_analysis.py
 
-# Hopper D4RL benchmark (requires d3rlpy / gymnasium)
+# ── Hopper benchmark ──────────────────────────────────────────────────────────
+# (requires d3rlpy / gymnasium; D4RL datasets downloaded automatically)
 python scripts/run_hopper_benchmark.py
 
-# Run all smoke tests
+# ── Dataset pipeline (only needed if regenerating from scratch) ───────────────
+# Step 1: build behavior pool
+# (imports shared library: verify_envA_v2_proxy_gate.py)
+python scripts/build_envA_v2_behavior_pool.py
+
+# Step 2: generate frozen datasets
+# (imports shared library: verify_envA_v2_proxy_gate.py)
+python scripts/generate_envA_v2_final_datasets.py
+
+# ── Tests ─────────────────────────────────────────────────────────────────────
 python -m pytest tests/ -v
 ```
+
+> **Shared library scripts** (`run_envA_v2_sanity.py`, `run_envA_v2_iql_sanity.py`, `verify_envA_v2_proxy_gate.py`) are imported as modules by the experiment scripts above. They are not run directly.
 
 ---
 
