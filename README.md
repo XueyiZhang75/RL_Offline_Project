@@ -1,428 +1,244 @@
 # Offline RL: Does State-Action Coverage Matter More Than Dataset Size?
 
-A study of the relative impact of **state-action coverage** versus **dataset size** on the performance ceiling of Offline Reinforcement Learning algorithms.
+A study of the relative impact of **state-action (SA) coverage** versus **dataset size**
+on the performance ceiling of Offline Reinforcement Learning algorithms.
+
+> **Course delivery version** — all experiments frozen, results reproducible.
+> See `docs/FINAL_PROJECT_STATUS_CHECK.md` for authoritative completion status.
 
 ---
 
-## 1. Project Overview
+## Research Question
 
-### Research Question
+> **In Offline RL, does state-action (SA) coverage determine the policy performance ceiling
+> more decisively than dataset size?**
 
-> **In Offline RL, does state-action (SA) coverage determine the policy performance ceiling more than dataset size?**
+The core comparison is between two dataset conditions on a 30×30 four-corridor discrete
+gridworld (EnvA_v2): a *small dataset with broad SA coverage* versus a *large dataset with
+narrow SA coverage*.
 
-The core comparison is between two dataset conditions on a discrete gridworld (EnvA_v2, 30×30 four-corridor maze):
+---
 
-| Condition | Transitions | SA Coverage |
-|-----------|------------|-------------|
-| small-wide | 50k | ~21% of all SA pairs |
-| small-narrow | 50k | ~6% of all SA pairs |
-| large-wide | 200k | ~21% of all SA pairs |
-| large-narrow | 200k | ~6% of all SA pairs |
+## Core Conclusion
 
-**Primary contrast**: small-wide vs large-narrow — smaller data with broader coverage versus larger data with narrower coverage.
+**SA coverage is the primary determinant of the Offline RL performance ceiling; the
+independent effect of dataset size is weak.**
 
-Three algorithms are evaluated on this contrast: BC (Behavior Cloning), CQL (Conservative Q-Learning), and IQL (Implicit Q-Learning), each with 20 training seeds.
-
-### Core Conclusion
-
-**SA coverage is the primary determinant of the Offline RL performance ceiling; the independent effect of dataset size is weak.**
-
-| Algorithm | Small-Wide | Large-Narrow | Gap (SW−LN) |
-|-----------|-----------|--------------|-------------|
+| Algorithm | Small-Wide (50k, ~21% SA) | Large-Narrow (200k, ~6% SA) | Gap (SW−LN) |
+|-----------|--------------------------|------------------------------|-------------|
 | BC  | 0.3265 | 0.2700 | **+0.057** |
 | CQL | 0.3970 | 0.2700 | **+0.127** |
 | IQL | 0.3970 | 0.2700 | **+0.127** |
 
-All three algorithms show small-wide > large-narrow. When coverage is held fixed at the narrow level, increasing dataset size from 50k to 200k yields no improvement (Δ = 0 for all three algorithms).
+All three algorithms confirm: 4× less data with broader SA coverage outperforms a larger
+dataset with narrow coverage. When SA coverage is held fixed at the narrow level, increasing
+dataset size from 50k to 200k yields **exactly Δ = 0** for all algorithms.
 
-### Primary vs Auxiliary Evidence
-
-- **Primary**: EnvA_v2 main experiment — 4-condition factorial (coverage × size), BC/CQL/IQL, 20 seeds each
-- **Auxiliary (quality sweep)**: 5 data quality levels on EnvA_v2 — shows that quality has a threshold effect; above the random floor, further quality improvements yield negligible gains
-- **Auxiliary (EnvB/C validation)**: Cross-environment check on single-path mazes — shows zero coverage gap, delimiting where the coverage effect applies
-- **Auxiliary (Hopper D4RL benchmark)**: Continuous control reference — validates that BC/IQL/TD3+BC implementations match published baselines
-
----
-
-## 2. Repository Structure
-
-```
-RL_Final_Project/
-├── envs/                          # Environment implementations
-│   ├── gridworld_envs.py
-│   └── __init__.py
-│
-├── scripts/                       # All executable scripts
-│   ├── final_analysis_and_plots.py        # Main analysis entry point
-│   ├── run_envA_v2_main_experiment.py     # BC/CQL main experiment
-│   ├── run_envA_v2_iql_main.py            # IQL main experiment
-│   ├── run_envA_v2_quality_sweep.py       # BC/CQL quality sweep
-│   ├── run_envA_v2_iql_quality_sweep.py   # IQL quality sweep
-│   ├── run_envbc_validation.py            # BC/CQL cross-environment validation
-│   ├── run_envbc_iql_validation.py        # IQL cross-environment validation
-│   ├── run_envA_v2_mechanism_analysis.py  # SA coverage mechanism analysis
-│   ├── run_hopper_benchmark.py            # Hopper D4RL benchmark
-│   ├── generate_envA_v2_final_datasets.py # Generate frozen datasets
-│   ├── build_envA_v2_behavior_pool.py     # Train behavior policy pool (DQN)
-│   ├── audit_final_datasets.py            # Dataset audit tool
-│   ├── run_envA_v2_sanity.py              # [shared lib] BC/CQL training infrastructure
-│   ├── run_envA_v2_iql_sanity.py          # [shared lib] IQL training infrastructure
-│   └── verify_envA_v2_proxy_gate.py       # [shared lib] Corridor structure & controllers
-│
-├── tests/                         # Core functional tests
-│   ├── test_phase1_envs.py
-│   ├── test_envA_v2_structure.py
-│   ├── test_envA_v2_final_datasets.py
-│   ├── test_envA_v2_main_experiment.py
-│   ├── test_envA_v2_iql_main.py
-│   ├── test_envA_v2_quality_sweep.py
-│   ├── test_envA_v2_iql_quality_sweep.py
-│   ├── test_envbc_validation.py
-│   ├── test_envbc_iql_validation.py
-│   ├── test_envA_v2_mechanism_analysis.py
-│   └── test_hopper_benchmark.py
-│
-├── artifacts/
-│   ├── final_datasets/            # Frozen official experiment datasets (.npz)
-│   ├── final_results/             # Final summary tables (4 CSVs)
-│   ├── behavior_pool/             # Behavior policy checkpoints (.pt)
-│   ├── analysis/                  # Mechanism analysis intermediate data
-│   ├── training_main/             # BC/CQL main experiment summary CSV
-│   ├── training_iql/              # IQL series summary CSVs
-│   ├── training_quality/          # Quality sweep summary CSV
-│   ├── training_validation/       # EnvB/C validation summary CSV
-│   └── training_benchmark/        # Hopper benchmark summary CSVs
-│
-├── figures/final/                 # All 6 final figures (.png)
-├── reports/
-│   └── final_project_results.md  # Final analysis report
-├── requirements.txt
-└── README.md
-```
+**Mechanism**: SA coverage determines which behavioral strategy families are learnable from
+the data, not merely which states are reachable. OOD action rate = 0 in all conditions;
+the effect is *behavioral diversity*, not distribution-shift prevention.
 
 ---
 
-## 3. File-by-File Role Explanation
+## Evidence Structure
 
-### Environment (`envs/`)
+### Primary Evidence — EnvA_v2 (fully closed)
+- 2×2 factorial design: coverage (wide ~21% / narrow ~6%) × size (50k / 200k)
+- BC, CQL, IQL — 20 training seeds each
+- Statistical closure: Claims 1.1 and 1.2 formally closed (p < 1e-7)
+- See `reports/final_project_results.md` §2–3
 
-**`envs/gridworld_envs.py`** — Defines all three discrete gridworld environments:
-- `EnvA_v2`: 30×30 four-corridor maze, the primary experiment environment. Has 670 reachable states and 2,680 SA pairs. Observations are 900-dimensional one-hot vectors (flattened 30×30 grid).
-- `EnvB`: 15×15 double-bottleneck maze used for cross-environment validation. Single-path structure.
-- `EnvC`: 15×15 key-door maze used for cross-environment validation. Single-path structure.
-- Also exports `HORIZON` (max steps per episode) and `N_ACTIONS` (= 4: up/down/left/right).
+### Cross-Environment Validation (rebuilt multi-path environments)
 
-### Scripts (`scripts/`)
+| Environment | BC gap | IQL gap | CQL gap | Status |
+|-------------|--------|---------|---------|--------|
+| EnvA_v2 (4-corridor, primary) | +0.057 | +0.127 | +0.127 | **3/3 CONFIRMED** |
+| EnvB_v2 (3-corridor, rebuilt) | +0.020 | +0.026 | +0.025 | **3/3 CONFIRMED** |
+| EnvC_v2 (key-door, rebuilt) | +0.020 | +0.024 | +0.002* | **BC+IQL confirmed; CQL mixed** |
 
-**`scripts/final_analysis_and_plots.py`** — The primary analysis entry point. Reads all experiment summary CSVs, produces 4 result tables (`artifacts/final_results/`), 6 figures (`figures/final/`), and the final report (`reports/final_project_results.md`). Running this single script regenerates all analysis outputs without rerunning any experiments.
+*EnvC_v2 CQL gap is positive but negligible (CI overlapping, 1/20 seeds). CQL's conservative
+Q-penalty suppresses path-diversity discovery in staged multi-phase environments.
 
-**`scripts/run_envA_v2_main_experiment.py`** — Runs the BC and CQL main experiment on EnvA_v2 across all 4 dataset conditions × 20 seeds. Output: `artifacts/training_main/envA_v2_main_summary.csv`.
+Original single-path EnvB/EnvC showed gap = 0 (structural saturation / above threshold).
+This delimits the conditions under which coverage effects appear.
+See `docs/VALIDATION_STATUS_ADDENDUM.md` for full details.
 
-**`scripts/run_envA_v2_iql_main.py`** — Runs the IQL main experiment on EnvA_v2 across all 4 dataset conditions × 20 seeds. Output: `artifacts/training_iql/envA_v2_iql_main_summary.csv`.
-
-**`scripts/run_envA_v2_quality_sweep.py`** — Runs BC and CQL across 5 data quality levels (random / suboptimal / medium / expert / mixed) × 20 seeds. Output: `artifacts/training_quality/envA_v2_quality_summary.csv`.
-
-**`scripts/run_envA_v2_iql_quality_sweep.py`** — Runs IQL across the same 5 quality levels × 20 seeds. Output: `artifacts/training_iql/envA_v2_iql_quality_sweep_summary.csv`.
-
-**`scripts/run_envbc_validation.py`** — Runs BC and CQL on EnvB and EnvC (2 dataset conditions × 20 seeds each). Output: `artifacts/training_validation/envbc_validation_summary.csv`.
-
-**`scripts/run_envbc_iql_validation.py`** — Runs IQL on EnvB and EnvC cross-environment validation. Output: `artifacts/training_iql/envbc_iql_validation_summary.csv`.
-
-**`scripts/run_envA_v2_mechanism_analysis.py`** — Computes per-run SA coverage metrics and OOD action rates for each experiment run, linking coverage to performance. Output: `artifacts/analysis/`.
-
-**`scripts/run_hopper_benchmark.py`** — Runs BC, CQL, IQL, and TD3+BC on Hopper-v2 (3 D4RL dataset splits × 5 seeds) using d3rlpy. Output: `artifacts/training_benchmark/hopper_benchmark_summary.csv`.
-
-**`scripts/generate_envA_v2_final_datasets.py`** — Uses the trained behavior policy pool to generate all 9 frozen EnvA_v2 datasets (4 main experiment conditions + 5 quality sweep variants). Output: `artifacts/final_datasets/`.
-
-**`scripts/build_envA_v2_behavior_pool.py`** — Trains 24 DQN behavior policies (3 quality levels × 8 seeds) for EnvA_v2. Output: `artifacts/behavior_pool/`.
-
-**`scripts/audit_final_datasets.py`** — Validates frozen dataset SA coverage, transition count, and quality against design specifications.
-
-**`scripts/run_envA_v2_sanity.py`** — Shared training infrastructure library imported by all BC/CQL experiment scripts. Defines the frozen `BC_CFG`, `CQL_CFG`, `MLP` architecture, `encode_obs`, `load_dataset`, `train_bc`, `train_cql`, and `evaluate`. Not an entry-point script — it is a shared module.
-
-**`scripts/run_envA_v2_iql_sanity.py`** — Shared IQL infrastructure library imported by all IQL experiment scripts. Defines the frozen `IQL_CFG`, `train_iql`, `save_iql_checkpoint`, and `load_iql_checkpoint`. Not an entry-point script — it is a shared module.
-
-**`scripts/verify_envA_v2_proxy_gate.py`** — Corridor structure and scripted controller library for EnvA_v2. Defines the four-corridor route families (`FAMILIES`, `SEED_FAMILY_MAP`, `TOUR_WAYPOINTS`), the BFS-based action table builder (`get_table`), and the delay action sampler (`get_delay_action`). Required by `build_envA_v2_behavior_pool.py` and `generate_envA_v2_final_datasets.py`. Not an entry-point script — it is a shared module.
-
-### Tests (`tests/`)
-
-**`tests/test_phase1_envs.py`** — Verifies all three environments accept valid actions, return correct observation shapes, and terminate correctly.
-
-**`tests/test_envA_v2_structure.py`** — Validates EnvA_v2 structural properties: number of reachable states, SA pair count, corridor topology.
-
-**`tests/test_envA_v2_final_datasets.py`** — Checks all 9 frozen `.npz` datasets for shape, transition count, and SA coverage against design specs.
-
-**`tests/test_envA_v2_main_experiment.py`** — End-to-end smoke test for the BC/CQL main experiment pipeline (small seed count, fast).
-
-**`tests/test_envA_v2_iql_main.py`** — End-to-end smoke test for the IQL main experiment pipeline.
-
-**`tests/test_envA_v2_quality_sweep.py`** / **`test_envA_v2_iql_quality_sweep.py`** — Smoke tests for the quality sweep pipeline (BC/CQL and IQL respectively).
-
-**`tests/test_envbc_validation.py`** / **`test_envbc_iql_validation.py`** — Smoke tests for the EnvB/C cross-environment validation pipeline.
-
-**`tests/test_envA_v2_mechanism_analysis.py`** — Smoke test for the mechanism analysis pipeline.
-
-**`tests/test_hopper_benchmark.py`** — Smoke test for the Hopper benchmark pipeline.
-
-### Data and Results (`artifacts/`)
-
-**`artifacts/final_datasets/`** — 13 frozen `.npz` dataset files: 4 main experiment conditions for EnvA_v2, 5 quality sweep variants for EnvA_v2, and 2 conditions each for EnvB and EnvC. These are the inputs to all training experiments.
-
-**`artifacts/final_results/`** — 4 final summary tables:
-- `final_discrete_results_master_table.csv`: Main experiment results (BC/CQL/IQL × 4 conditions, with mean/std/95% CI)
-- `final_quality_results_table.csv`: Quality sweep results
-- `final_validation_results_table.csv`: EnvB/C cross-environment validation results
-- `final_benchmark_results_table.csv`: Hopper D4RL benchmark results
-
-**`artifacts/behavior_pool/`** — 40 trained DQN policy checkpoints used to generate the frozen datasets. Also includes `behavior_policy_catalog.csv` and `envA_v2_controller_eval.csv`.
-
-**`artifacts/analysis/`** — Output from mechanism analysis: `envA_v2_mechanism_summary.csv` and per-seed metrics `envA_v2_mechanism_seed_metrics.csv`.
-
-**`artifacts/training_*/`** — Per-experiment summary CSVs produced by the training scripts. These are the source data for `final_analysis_and_plots.py`.
-
-### Figures (`figures/final/`)
-
-- **`fig1_main_coverage_vs_size.png`** — Four-condition matrix: mean return across all coverage × size combinations for BC, CQL, and IQL.
-- **`fig2_core_smallwide_vs_largenarrow.png`** — Core contrast bar chart: small-wide vs large-narrow across all three algorithms.
-- **`fig3_quality_modulation.png`** — Quality sweep results showing the threshold effect and quality insensitivity above the random floor.
-- **`fig4_envbc_validation.png`** — EnvB/C cross-environment validation showing zero wide/narrow gap due to single-path structure.
-- **`fig5_mechanism_summary.png`** — SA coverage vs mean return scatter, illustrating the mechanism linking coverage to performance.
-- **`fig6_benchmark_validation.png`** — Hopper D4RL benchmark results for external reference validation.
-
-### Report (`reports/`)
-
-**`reports/final_project_results.md`** — Full final analysis report. Contains the complete research conclusions, data tables, interpretation of all experiments, mechanism analysis, and limitations. **Recommended first read.**
+### Auxiliary Evidence
+- **Quality sweep**: 5 data quality levels × BC/CQL/IQL × 20 seeds. Random = universal
+  failure floor. **Caveat**: SA coverage varies across quality bins (coverage confound).
+- **Hopper D4RL benchmark**: BC/IQL/TD3+BC match published baselines; included as
+  implementation validation only (**appendix**). CQL anomaly (hyperparameter issue)
+  documented and excluded from claims.
 
 ---
 
-## 4. Environment and Dependencies
+## Quick Start / Reproduction
 
-**Python**: 3.10 or higher (developed on 3.12.2)
-
-**Install dependencies:**
-
+### Environment setup
 ```bash
 pip install -r requirements.txt
 ```
 
-**Key libraries:**
-
-| Library | Purpose |
-|---------|---------|
-| `torch >= 2.0` | Neural network training for BC / CQL / IQL |
-| `numpy >= 1.24` | Array operations, dataset handling |
-| `matplotlib >= 3.7` | Figure generation |
-| `scipy >= 1.10` | Statistical tests (95% confidence intervals) |
-| `d3rlpy >= 2.0` | Continuous control algorithms for Hopper benchmark |
-| `gymnasium >= 0.29` | Hopper-v2 environment (benchmark only) |
-| `h5py >= 3.8` | D4RL HDF5 dataset loading (benchmark only) |
-
-> Note: `d3rlpy`, `gymnasium`, and `h5py` are only required for the Hopper benchmark script (`run_hopper_benchmark.py`). For the discrete gridworld main line, only `torch`, `numpy`, `matplotlib`, and `scipy` are needed.
-
----
-
-## 5. Step-by-Step Reproduction
-
-### Option A — Inspect final results (no code required)
-
-All results are precomputed and included in the repository.
-
-- **Step 1**: Read `reports/final_project_results.md` for the complete analysis report (recommended starting point).
-- **Step 2**: Open `artifacts/final_results/` to inspect the 4 summary CSV tables.
-- **Step 3**: Open `figures/final/` to view the 6 final figures.
-
-### Option B — Regenerate all analysis outputs (tables + figures + report)
-
-This does not rerun any experiments. It reads existing summary CSVs and reproduces all outputs.
-
+### Run all tests (smoke, ~2 minutes)
 ```bash
-# Step 1: Install core dependencies
-pip install torch numpy matplotlib scipy
-
-# Step 2: Run the final analysis script
-python scripts/final_analysis_and_plots.py
+python -m pytest tests/ -x -q
 ```
 
-Outputs are written to `artifacts/final_results/`, `figures/final/`, and `reports/final_project_results.md`.
-
-### Option C — Rerun experiments (GPU required; time-intensive)
-
-> **Warning**: Full experiment reruns require a GPU and take several hours for the main experiment alone. All training scripts support resumable append mode (each seed is written individually; completed seeds are skipped on re-run).
-
-**Step 1**: Verify frozen datasets exist.
-
+### Reproduce primary results from frozen datasets
 ```bash
-ls artifacts/final_datasets/
-# Should show 13 .npz files
-```
-
-If datasets are missing, regenerate them (requires behavior pool checkpoints):
-
-```bash
-python scripts/build_envA_v2_behavior_pool.py    # Train DQN behavior policies
-python scripts/generate_envA_v2_final_datasets.py # Generate frozen datasets
-```
-
-> Note: `build_envA_v2_behavior_pool.py` depends on `verify_envA_v2_proxy_gate.py` (corridor structure); `generate_envA_v2_final_datasets.py` also depends on it. Both dependencies are present in `scripts/`.
-
-**Step 2**: Run the BC/CQL main experiment.
-
-```bash
-python scripts/run_envA_v2_main_experiment.py
-```
-
-> Depends on `run_envA_v2_sanity.py` (shared BC/CQL infrastructure). Output: `artifacts/training_main/envA_v2_main_summary.csv`.
-
-**Step 3**: Run the IQL main experiment.
-
-```bash
-python scripts/run_envA_v2_iql_main.py
-```
-
-> Depends on `run_envA_v2_iql_sanity.py` (shared IQL infrastructure) and `run_envA_v2_sanity.py`. Output: `artifacts/training_iql/envA_v2_iql_main_summary.csv`.
-
-**Step 4**: Run quality sweep experiments.
-
-```bash
-python scripts/run_envA_v2_quality_sweep.py       # depends on run_envA_v2_sanity.py
-python scripts/run_envA_v2_iql_quality_sweep.py   # depends on run_envA_v2_iql_sanity.py
-```
-
-**Step 5**: Run cross-environment validation.
-
-```bash
-python scripts/run_envbc_validation.py            # depends on run_envA_v2_sanity.py
-python scripts/run_envbc_iql_validation.py        # depends on run_envA_v2_iql_sanity.py
-```
-
-**Step 6**: Run mechanism analysis.
-
-```bash
-python scripts/run_envA_v2_mechanism_analysis.py
-```
-
-**Step 7 (optional)**: Run Hopper D4RL benchmark.
-
-```bash
-# Requires: d3rlpy, gymnasium, h5py
-# D4RL dataset files are downloaded automatically on first run
-python scripts/run_hopper_benchmark.py
-```
-
-**Step 8**: Regenerate final analysis outputs.
-
-```bash
-python scripts/final_analysis_and_plots.py
-```
-
----
-
-## 6. Key Script Commands
-
-```bash
-# ── Analysis (no experiment rerun needed) ────────────────────────────────────
-# Regenerate all tables, figures, and the final report from existing CSVs
-python scripts/final_analysis_and_plots.py
-
-# ── Main experiments ─────────────────────────────────────────────────────────
-# BC/CQL main experiment — EnvA_v2, 4 conditions × 20 seeds
-# (imports shared library: run_envA_v2_sanity.py)
+# BC/CQL main experiment (20 seeds per condition)
 python scripts/run_envA_v2_main_experiment.py
 
-# IQL main experiment — EnvA_v2, 4 conditions × 20 seeds
-# (imports shared libraries: run_envA_v2_iql_sanity.py, run_envA_v2_sanity.py)
+# IQL main experiment
 python scripts/run_envA_v2_iql_main.py
 
-# ── Quality sweep ─────────────────────────────────────────────────────────────
-# BC/CQL quality sweep — 5 quality levels × 20 seeds
-# (imports shared library: run_envA_v2_sanity.py)
-python scripts/run_envA_v2_quality_sweep.py
-
-# IQL quality sweep — 5 quality levels × 20 seeds
-# (imports shared library: run_envA_v2_iql_sanity.py)
-python scripts/run_envA_v2_iql_quality_sweep.py
-
-# ── Cross-environment validation ─────────────────────────────────────────────
-# BC/CQL EnvB + EnvC — 2 conditions × 20 seeds
-# (imports shared library: run_envA_v2_sanity.py)
-python scripts/run_envbc_validation.py
-
-# IQL EnvB + EnvC validation
-# (imports shared library: run_envA_v2_iql_sanity.py)
-python scripts/run_envbc_iql_validation.py
-
-# ── Mechanism analysis ────────────────────────────────────────────────────────
-# SA coverage analysis — reads existing checkpoints
-# (imports shared library: run_envA_v2_sanity.py)
-python scripts/run_envA_v2_mechanism_analysis.py
-
-# ── Hopper benchmark ──────────────────────────────────────────────────────────
-# (requires d3rlpy / gymnasium; D4RL datasets downloaded automatically)
-python scripts/run_hopper_benchmark.py
-
-# ── Dataset pipeline (only needed if regenerating from scratch) ───────────────
-# Step 1: build behavior pool
-# (imports shared library: verify_envA_v2_proxy_gate.py)
-python scripts/build_envA_v2_behavior_pool.py
-
-# Step 2: generate frozen datasets
-# (imports shared library: verify_envA_v2_proxy_gate.py)
-python scripts/generate_envA_v2_final_datasets.py
-
-# ── Tests ─────────────────────────────────────────────────────────────────────
-python -m pytest tests/ -v
+# Regenerate all figures and analysis tables
+python scripts/final_analysis_and_plots.py
+python scripts/generate_final_figure_suite.py
 ```
 
-> **Shared library scripts** (`run_envA_v2_sanity.py`, `run_envA_v2_iql_sanity.py`, `verify_envA_v2_proxy_gate.py`) are imported as modules by the experiment scripts above. They are not run directly.
+### Reproduce validation environments
+```bash
+# EnvB_v2 formal validation (3 algorithms × 20 seeds)
+python scripts/run_envB_v2_bc_formal_validation.py
+python scripts/run_envB_v2_iql_formal_validation.py
+python scripts/run_envB_v2_cql_formal_validation.py
+
+# EnvC_v2 formal validation
+python scripts/run_envC_v2_bc_formal_validation.py
+python scripts/run_envC_v2_iql_formal_validation.py
+python scripts/run_envC_v2_cql_formal_validation.py
+```
+
+### Reproduce frozen datasets from scratch (optional)
+```bash
+python scripts/build_envA_v2_behavior_pool.py      # ~15 min
+python scripts/generate_envA_v2_final_datasets.py  # ~5 min
+python scripts/build_envB_v2_datasets.py           # ~2 min
+python scripts/build_envC_v2_datasets.py           # ~2 min
+```
 
 ---
 
-## 7. Final Outputs
+## Repository Layout
 
-| File | Location | Description |
-|------|----------|-------------|
-| Final analysis report | `reports/final_project_results.md` | Complete conclusions, tables, interpretation |
-| Main experiment table | `artifacts/final_results/final_discrete_results_master_table.csv` | BC/CQL/IQL × 4 conditions, mean/std/95% CI |
-| Quality sweep table | `artifacts/final_results/final_quality_results_table.csv` | 5 quality levels × 3 algorithms |
-| Validation table | `artifacts/final_results/final_validation_results_table.csv` | EnvB/C × 3 algorithms |
-| Benchmark table | `artifacts/final_results/final_benchmark_results_table.csv` | Hopper × 4 algorithms |
-| Core contrast figure | `figures/final/fig2_core_smallwide_vs_largenarrow.png` | Primary conclusion visualization |
-| Four-condition matrix | `figures/final/fig1_main_coverage_vs_size.png` | Coverage × size double-factor results |
-| Quality modulation figure | `figures/final/fig3_quality_modulation.png` | Quality threshold effect |
-| Cross-env validation figure | `figures/final/fig4_envbc_validation.png` | EnvB/C zero-gap result |
-| Mechanism figure | `figures/final/fig5_mechanism_summary.png` | SA coverage vs performance |
-| Benchmark figure | `figures/final/fig6_benchmark_validation.png` | Hopper D4RL reference trends |
-
-**Recommended reading order**: `reports/final_project_results.md` > `fig2` > `fig1` > `fig3` > `fig4` > `fig5` > `fig6`
+```
+RL_Final_Project/
+│
+├── envs/                          # Environment implementations
+│   ├── gridworld_envs.py          # All discrete gridworlds (EnvA/B/C/A_v2/B_v2/C_v2)
+│   └── __init__.py
+│
+├── scripts/                       # All executable scripts
+│   ├── run_envA_v2_main_experiment.py     # BC/CQL primary experiment
+│   ├── run_envA_v2_iql_main.py            # IQL primary experiment
+│   ├── run_envA_v2_quality_sweep.py       # Quality sweep BC/CQL
+│   ├── run_envA_v2_iql_quality_sweep.py   # Quality sweep IQL
+│   ├── run_envA_v2_mechanism_analysis.py  # SA coverage mechanism analysis
+│   ├── run_envbc_validation.py            # Original EnvB/C cross-env validation
+│   ├── run_envbc_iql_validation.py        # Original EnvB/C IQL validation
+│   ├── run_envB_v2_*_formal_validation.py # EnvB_v2 rebuilt validation (BC/IQL/CQL)
+│   ├── run_envC_v2_*_formal_validation.py # EnvC_v2 rebuilt validation (BC/IQL/CQL)
+│   ├── run_hopper_benchmark.py            # Hopper D4RL benchmark
+│   ├── build_envB_v2_datasets.py          # EnvB_v2 dataset generation
+│   ├── build_envC_v2_datasets.py          # EnvC_v2 dataset generation
+│   ├── generate_envA_v2_final_datasets.py # Primary frozen dataset generation
+│   ├── build_envA_v2_behavior_pool.py     # Behavior policy pool
+│   ├── generate_statistical_closure.py   # Hypothesis test table
+│   ├── final_analysis_and_plots.py        # Analysis entry point
+│   ├── generate_final_figure_suite.py     # All 12 canonical figures
+│   ├── audit_final_datasets.py            # Dataset verification
+│   ├── run_envA_v2_sanity.py              # [shared lib] BC/CQL training infrastructure
+│   ├── run_envA_v2_iql_sanity.py          # [shared lib] IQL training infrastructure
+│   └── verify_envA_v2_proxy_gate.py       # [shared lib] Corridor controllers
+│
+├── tests/                         # Test suite (15 test files)
+│
+├── docs/                          # Key project documents
+│   ├── FINAL_PROJECT_STATUS_CHECK.md    # Authoritative completion status
+│   ├── FINAL_SUBMISSION_BRIEF.md        # One-page research brief
+│   ├── FINAL_CANONICAL_CLAIMS.md        # Canonical claim text blocks
+│   ├── PRESENTATION_OUTLINE.md          # 14-slide presentation guide
+│   ├── FIGURE_MANIFEST.md               # Figure catalogue
+│   ├── VALIDATION_STATUS_ADDENDUM.md    # EnvB_v2/EnvC_v2 status
+│   ├── CLAIM_HIERARCHY.md               # Claim boundaries and evidence tiers
+│   ├── CLAIM_SUPPORT_MATRIX.md          # Claims mapped to statistics
+│   └── SUBMISSION_PROTOCOL_V2.md        # Submission-readiness decisions
+│
+├── reports/
+│   └── final_project_results.md         # Full research report (10 sections)
+│
+├── artifacts/
+│   ├── final_results/             # 5 result tables + hypothesis test CSV
+│   ├── final_datasets/            # 9 frozen primary NPZ datasets
+│   ├── envB_v2_datasets/          # 2 EnvB_v2 NPZ datasets + manifest
+│   ├── envC_v2_datasets/          # 2 EnvC_v2 NPZ datasets + manifest
+│   ├── analysis/                  # Mechanism analysis CSVs
+│   ├── training_main/             # BC/CQL main experiment result CSV
+│   ├── training_iql/              # IQL result CSVs
+│   ├── training_quality/          # Quality sweep result CSV
+│   ├── training_validation_v2/    # EnvB_v2/EnvC_v2 formal result CSVs
+│   ├── training_benchmark/        # Hopper benchmark result CSV
+│   └── behavior_pool/             # Pre-trained behavior policies (1.9 MB)
+│
+└── figures/final/
+    ├── mainline/                  # M1–M7: primary evidence figures
+    ├── auxiliary/                 # A1–A5 + supplement: auxiliary figures
+    └── fig1_*.png … fig6_*.png   # Backward-compatible aliases
+```
 
 ---
 
-## 8. Current Issues and Limitations
+## Figure Roadmap
 
-### Limitations from Environment Structure
+### Mainline Figures (`figures/final/mainline/`)
 
-**1. EnvB/C single-path structure invalidates cross-environment generalization.**
-EnvB (double-bottleneck) and EnvC (key-door) both have single-path layouts where any policy must pass through the same critical nodes. This makes the SA coverage of wide and narrow datasets nearly identical (EnvB ≈ 99% coverage). The wide vs narrow gap is 0.000 for all algorithms on both environments. The cross-environment validation does not provide a meaningful coverage contrast; it only confirms that the training pipeline runs correctly on other environments and delimits where the coverage effect applies (multi-path environments).
+| File | Contents | Report § |
+|------|---------|---------|
+| fig01_envA_factorial_overview.png | All 4 conditions × 3 algorithms | §2 |
+| fig02_envA_primary_contrast_sw_vs_ln.png | SW vs LN primary contrast (+0.057–+0.127) | §2.1 |
+| fig03_envA_size_effect_decomposition.png | SN→LN Δ=0; SW→LW algorithm-dependent | §2.2–2.3 |
+| fig04_statistical_closure_matrix.png | 4×3 p-value / verdict matrix | §3 |
+| fig05_mechanism_behavioral_diversity.png | SA coverage vs return; OOD=0; mechanism | §7 |
+| fig06_rebuilt_validation_gap_summary.png | EnvB_v2/EnvC_v2 gap bars with status | §5 |
+| fig07_rebuilt_route_family_convergence.png | Route-family stacked bars; CQL mixed shown | §5 |
 
-**2. Environment scale too small to observe distribution shift.**
-EnvA_v2 has only 2,680 SA pairs. Even the narrow dataset covers most states encountered during evaluation trajectories. OOD (out-of-distribution) action rate is 0.000 under all experimental conditions. The mechanism by which coverage constrains performance cannot be attributed to distribution shift in this setting; coverage acts instead by limiting the diversity of accessible state-action pairs during learning.
+### Auxiliary Figures (`figures/final/auxiliary/`)
 
-**3. Discrete action space excludes continuous control algorithms from the main line.**
-IQL and TD3+BC in their original continuous-control formulations are not directly applicable to the discrete gridworld. The Hopper benchmark serves as a separate validation track rather than as part of the coverage study.
+| File | Contents | Report § |
+|------|---------|---------|
+| fig08_original_envbc_boundary_conditions.png | Original EnvB/C zero-gap boundary | §4 |
+| fig09_quality_sweep_with_coverage_caveat.png | Quality sweep + coverage confound | §6 |
+| fig10_dataset_audit_overview.png | All datasets: SA coverage vs size | Appendix |
+| fig11_visitation_heatmaps.png | Transition-level visit heatmaps (3×2) | Appendix |
+| fig11b_visitation_heatmaps_postdoor.png | EnvC_v2 post-door supplement | Appendix |
+| fig12_hopper_benchmark_appendix.png | Hopper benchmark (5-seed pilot, appendix) | §8 |
 
-### Limitations from Benchmark Configuration
+---
 
-**4. CQL is not properly tuned for the D4RL Hopper benchmark.**
-The Hopper benchmark uses default CQL hyperparameters (`batch_size=256`, `cql_alpha` not tuned for D4RL). This produces normalized scores of 1–3, far below the published value of ~58. This anomaly does not affect the discrete main-line conclusions — the discrete CQL configuration was tuned independently — but the benchmark CQL results should not be used as a reference.
+## Key Documents for Reviewers
 
-**5. Hopper benchmark uses only 5 seeds.**
-Statistical confidence is lower than the discrete main line (20 seeds). Hopper results are provided as directional reference only.
+| Document | Purpose |
+|----------|---------|
+| `reports/final_project_results.md` | Full 10-section research report |
+| `docs/FINAL_SUBMISSION_BRIEF.md` | 1-page abstract + claims + caveats + Q&A |
+| `docs/FINAL_PROJECT_STATUS_CHECK.md` | Authoritative status: what is and isn't closed |
+| `docs/PRESENTATION_OUTLINE.md` | 14-slide course presentation outline |
+| `docs/CLAIM_HIERARCHY.md` | Exact claim boundaries (what can/cannot be stated) |
 
-### Interpretation Boundaries
+---
 
-**6. Main conclusion is specific to multi-path discrete environments.**
-The coverage advantage of small-wide over large-narrow is validated on EnvA_v2 (four-corridor, 30×30 discrete gridworld). Whether this finding generalizes to continuous control, higher-dimensional state spaces, or environments with different topology requires further study.
+## Caveats and Honest Limitations
 
-**7. BC shows a non-negligible size effect under wide coverage.**
-BC achieves a gain of Δ=+0.0745 when moving from small-wide to large-wide, indicating that dataset size is not irrelevant for BC when coverage is already broad. The conclusion that size matters less than coverage holds directionally but the magnitude of the size effect is algorithm-dependent.
-
+1. **Small discrete gridworlds only**: All primary experiments use deterministic ≤30-cell
+   environments. OOD rate = 0 in all conditions — scalability to larger settings is untested.
+2. **EnvC_v2 CQL shows mixed evidence**: BC+IQL confirm coverage effect (+0.020/+0.024,
+   non-overlapping CIs); CQL gap = +0.002 (negligible, CI overlapping). CQL's conservative
+   Q-penalty suppresses path-diversity in staged multi-phase environments.
+3. **Quality sweep has coverage confound**: SA coverage varies across quality bins; quality
+   and coverage effects are not cleanly separated.
+4. **Hopper benchmark CQL anomaly**: CQL normalized scores are inconsistent
+   (3.17 / 26.65 / 1.32 vs. published ~58 / 46 / 91). Likely D4RL hyperparameter
+   misconfiguration. CQL benchmark results excluded from all claims.
+5. **BC/IQL Claim 1.3 (size effect) is directional only**: p = 0.093 / 0.119, not significant
+   at α = 0.05 with n = 20.

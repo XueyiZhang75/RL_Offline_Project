@@ -2,12 +2,16 @@
 Phase 1: Discrete gridworld environments for Offline RL coverage study.
 
 Environments:
-  EnvA — 15x15 FourRooms (baseline, known to saturate at 50k/200k scale)
-  EnvB — 15x15 Bottleneck (verification environment)
-  EnvC — 15x15 Key-Door (verification environment)
+  EnvA     — 15x15 FourRooms (baseline, known to saturate at 50k/200k scale)
+  EnvB     — 15x15 Bottleneck (verification environment)
+  EnvC     — 15x15 Key-Door (verification environment)
+  EnvA_v2  — 30x30 Four-Corridor Grid (main experiment environment)
+  EnvB_v2  — 20x20 Three-Corridor Grid (validation environment; BC/IQL/CQL confirmed)
+  EnvC_v2  — 20x20 Key-Door Staged Multi-Route (validation environment; BC/IQL confirmed)
 
 Actions: 0=up, 1=down, 2=left, 3=right
-Deterministic, horizon=100, reward: +1 at goal, -0.01 per step
+Deterministic, horizon=100 (EnvA/B/C/A_v2) or 200 (EnvB_v2) or 300 (EnvC_v2).
+reward: +1 at goal, -0.01 per step
 """
 
 from collections import deque
@@ -22,6 +26,8 @@ STEP_PENALTY = -0.01
 
 class _GridBase:
     """Lightweight base for deterministic discrete gridworlds."""
+
+    _horizon = HORIZON   # subclasses may override (e.g. EnvB_v2 uses 200)
 
     def __init__(self):
         self._step_count = 0
@@ -60,7 +66,7 @@ class _GridBase:
         self._pos = next_pos
 
         terminated = (self._pos == self._goal)
-        truncated = (not terminated) and (self._step_count >= HORIZON)
+        truncated = (not terminated) and (self._step_count >= self._horizon)
 
         reward = STEP_PENALTY + extra_reward
         if terminated:
@@ -494,3 +500,377 @@ class EnvA_v2(_GridBase):
         pos = self._pos_from_state(state)
         next_pos = self._try_move(pos, action)
         return self._state_from_pos(next_pos)
+
+
+# ─────────────────────────────────────────────
+# EnvB_v2: 20×20 Three-Corridor Grid
+# ─────────────────────────────────────────────
+#
+# Provisional implementation authorized by v4 fairness audit (2026-04-06).
+# Awaiting formal 20-seed validation.
+#
+# Layout:
+#   Outer walls: row 0, row 19, col 0, col 19.
+#   Top stem:    rows 1-2,   cols 1-18 (shared by all routes).
+#   Split wall:  row 3,      cols 1-18, doorways at cols 4, 9, 14.
+#   3 corridors: rows 4-15, separated by dividers at cols 7 and 12.
+#     Corridor A: cols 1-6   (12×6 = 72 cells)
+#     Corridor B: cols 8-11  (12×4 = 48 cells)
+#     Corridor C: cols 13-18 (12×6 = 72 cells)
+#   Merge wall:  row 16,     cols 1-18, doorways at cols 4, 9, 14.
+#   Bottom stem: rows 17-18, cols 1-18 (shared by all routes).
+#
+#   Start: (1, 9)   Goal: (18, 9)
+#
+#   Doorways (split): (3,4), (3,9), (3,14)
+#   Doorways (merge): (16,4), (16,9), (16,14)
+#
+#   Route family assignment (for behavior pool):
+#     Family A: enters/exits via col 4 doorways; exclusive cells cols 1-6
+#     Family B: enters/exits via col 9 doorways; exclusive cells cols 8-11
+#     Family C: enters/exits via col 14 doorways; exclusive cells cols 13-18
+#
+#   Waypoints (v2 lateral traversal — used by behavior pool scripts):
+#     Family A: START -> (3,4) -> (10,1) -> (16,4) -> GOAL
+#     Family B: START -> (3,9) -> (10,11) -> (16,9) -> GOAL
+#     Family C: START -> (3,14) -> (10,18) -> (16,14) -> GOAL
+#
+#   Reachable states: 270.  SA pairs: 1080.
+#   Stem SA fraction: 28.9%.  Overall exclusivity: 71.1%.
+#
+_GRID_B2 = 20
+_DOORWAYS_SPLIT_B2 = frozenset({(3, 4),  (3, 9),  (3, 14)})
+_DOORWAYS_MERGE_B2 = frozenset({(16, 4), (16, 9), (16, 14)})
+DOORWAYS_B2 = _DOORWAYS_SPLIT_B2 | _DOORWAYS_MERGE_B2
+
+# Route families: (column_lo, column_hi inclusive) for corridor rows 4-15
+CORRIDOR_COLS_B2 = {"A": (1, 6), "B": (8, 11), "C": (13, 18)}
+
+# Waypoints for BFS-guided behavior pool controllers
+FAMILY_WAYPOINTS_B2 = {
+    "A": ((3, 4),  (10, 1),  (16, 4),  (18, 9)),
+    "B": ((3, 9),  (10, 11), (16, 9),  (18, 9)),
+    "C": ((3, 14), (10, 18), (16, 14), (18, 9)),
+}
+
+
+def _build_walls_b2():
+    walls = set()
+    G = _GRID_B2
+    # outer walls
+    for r in range(G):
+        walls.add((r, 0))
+        walls.add((r, G - 1))
+    for c in range(G):
+        walls.add((0, c))
+        walls.add((G - 1, c))
+    # split wall at row 3 (doorways at cols 4, 9, 14)
+    for c in range(1, G - 1):
+        if (3, c) not in _DOORWAYS_SPLIT_B2:
+            walls.add((3, c))
+    # merge wall at row 16 (doorways at cols 4, 9, 14)
+    for c in range(1, G - 1):
+        if (16, c) not in _DOORWAYS_MERGE_B2:
+            walls.add((16, c))
+    # corridor dividers at col 7 and col 12, rows 3-16 inclusive
+    for r in range(3, 17):
+        walls.add((r, 7))
+        walls.add((r, 12))
+    return frozenset(walls)
+
+
+_WALLS_B2 = _build_walls_b2()
+_REACHABLE_B2 = _bfs_reachable((1, 9), _WALLS_B2, grid_size=_GRID_B2)
+
+
+class EnvB_v2(_GridBase):
+    """
+    20×20 Three-Corridor gridworld (validation environment).
+
+    3 fully isolated corridors (A-C) connected to shared top/bottom stems
+    via 6 doorways.  Each corridor is a route family whose cells are
+    exclusively visited only by controllers assigned to that family.
+
+    Start: (1,9), Goal: (18,9).
+    Reachable states: 270.  SA pairs: 1080.
+    Horizon: 200 (longer than base 100 to accommodate wider corridor traversal).
+
+    Validation status (2026-04-06): formally validated — BC, IQL, and CQL all
+    show wide > narrow (gaps +0.020, +0.026, +0.025; IQL and CQL CIs non-overlapping).
+    Narrow policies lock to corridor A; wide policies discover shorter corridor B.
+    Dataset config: small-wide (50k, A+B+C, delay=0.25, seed=425),
+                    large-narrow (200k, family A, delay=0.10, seed=411).
+    """
+
+    start_pos          = (1, 9)
+    goal_pos           = (18, 9)
+    grid_size          = _GRID_B2
+    _horizon           = 200          # overrides base class HORIZON=100
+    doorway_positions  = DOORWAYS_B2
+    corridor_cols      = CORRIDOR_COLS_B2
+    family_waypoints   = FAMILY_WAYPOINTS_B2
+
+    def __init__(self):
+        super().__init__()
+        self._walls = _WALLS_B2
+        self._start = self.start_pos
+        self._goal  = self.goal_pos
+
+    def _state_from_pos(self, pos):
+        return pos
+
+    def _pos_from_state(self, state):
+        return state
+
+    def get_reachable_states(self):
+        return _REACHABLE_B2
+
+    def transition(self, state, action):
+        pos = self._pos_from_state(state)
+        next_pos = self._try_move(pos, action)
+        return self._state_from_pos(next_pos)
+
+    def cell_family(self, pos):
+        """Return route family label: 'A', 'B', 'C', 'stem', or 'doorway'."""
+        if pos in DOORWAYS_B2:
+            return "doorway"
+        r, c = pos
+        if 4 <= r <= 15:
+            for fam, (lo, hi) in CORRIDOR_COLS_B2.items():
+                if lo <= c <= hi:
+                    return fam
+        return "stem"
+
+
+# ─────────────────────────────────────────────
+# EnvC_v2: 20×20 Key-Door Staged Multi-Route
+# ─────────────────────────────────────────────
+#
+# Provisional implementation authorized by v2 structural pilot (2026-04-08).
+# Awaiting formal 20-seed validation.
+#
+# Design (v2 redesign spec):
+#   Grid: 20×20.  State: extended ((row, col), has_key), has_key ∈ {0, 1}.
+#   Start: (1,4).  Goal: (9,18).  Door: (9,10) — passable only with has_key=1.
+#   Keys: K1=(5,2), K2=(5,7) — stepping on either auto-sets has_key=1.
+#
+#   LEFT HALF walls (pre-door region):
+#     Center dividing wall: col 10, rows 1-18  [door at (9,10) not in permanent walls]
+#     L/R corridor divider: col 4, rows 2-8    [forces left vs right pre-door choice]
+#     Bottom-left dead zone: rows 10-18 cols 1-9  [no scripted path visits here]
+#     Top-right dead zone:   rows 1-2 cols 11-18  [above all post-door paths]
+#
+#   POST-DOOR separator: row 9 cols 12-17  [col 18 open — goal approach to (9,18)]
+#
+#   Combined route families (4):
+#     LU: Pre-L (K1) + Post-U  waypoints: (5,2) → (9,10) → (5,15) → (9,18)
+#     LD: Pre-L (K1) + Post-D  waypoints: (5,2) → (9,10) → (13,15) → (9,18)
+#     RU: Pre-R (K2) + Post-U  waypoints: (5,7) → (9,10) → (5,15) → (9,18)
+#     RD: Pre-R (K2) + Post-D  waypoints: (5,7) → (9,10) → (13,15) → (9,18)
+#
+#   Exclusive regions:
+#     Pre-L (has_key=0): rows 2-8, cols 1-3   → exclusive to LU, LD
+#     Pre-R (has_key=0): rows 2-8, cols 5-9   → exclusive to RU, RD
+#     Post-U (has_key=1): rows 3-8, cols 12-18 → exclusive to LU, RU
+#     Post-D (has_key=1): rows 10-16,cols 12-18→ exclusive to LD, RD
+#
+#   Path lengths: LU≈LD≈34 steps, RU≈RD≈27 steps  (spread: 7 steps)
+#   Reachable extended states: ~269.  SA pairs: ~1076.
+#   Horizon: 300 (key-door task needs more steps than single-phase EnvB_v2).
+#
+#   Dataset config (frozen, v2 pilot):
+#     small-wide:       50k transitions,  LU+LD+RU+RD, delay=0.05, uniform_random, seed=600
+#     large-narrow-LU: 200k transitions, LU only,      delay=0.05, opposite,       seed=601
+#
+_GRID_C2   = 20
+_DOOR_C2   = (9, 10)
+_KEY_CELLS_C2 = frozenset({(5, 2), (5, 7)})
+_K1_C2, _K2_C2 = (5, 2), (5, 7)
+
+# Waypoints for BFS-guided behavior pool controllers
+FAMILY_WAYPOINTS_C2 = {
+    "LU": ((5, 2),  (9, 10), (5, 15),  (9, 18)),
+    "LD": ((5, 2),  (9, 10), (13, 15), (9, 18)),
+    "RU": ((5, 7),  (9, 10), (5, 15),  (9, 18)),
+    "RD": ((5, 7),  (9, 10), (13, 15), (9, 18)),
+}
+
+# Exclusive corridor column / row ranges for coverage classification
+CORRIDOR_C2 = {
+    "Pre-L":  {"has_key": 0, "row_lo": 2, "row_hi": 8, "col_lo": 1, "col_hi": 3},
+    "Pre-R":  {"has_key": 0, "row_lo": 2, "row_hi": 8, "col_lo": 5, "col_hi": 9},
+    "Post-U": {"has_key": 1, "row_lo": 3, "row_hi": 8, "col_lo": 12, "col_hi": 18},
+    "Post-D": {"has_key": 1, "row_lo": 10, "row_hi": 16, "col_lo": 12, "col_hi": 18},
+}
+
+
+def _build_walls_c2():
+    """Permanent walls for EnvC_v2.  Door (9,10) is NOT included — it is
+    conditionally blocked at runtime based on has_key state."""
+    walls = set()
+    G = _GRID_C2
+    # Outer walls
+    for r in range(G):
+        walls.add((r, 0));  walls.add((r, G - 1))
+    for c in range(G):
+        walls.add((0, c));  walls.add((G - 1, c))
+    # Center dividing wall col 10, rows 1-18 (door at (9,10) excluded)
+    for r in range(1, 19):
+        if (r, 10) != _DOOR_C2:
+            walls.add((r, 10))
+    # L/R pre-door divider: col 4, rows 2-8
+    for r in range(2, 9):
+        walls.add((r, 4))
+    # Post-door separator: row 9, cols 12-17 (col 18 open for goal approach)
+    for c in range(12, 18):   # 12,13,14,15,16,17 — 17 included, 18 excluded
+        walls.add((9, c))
+    # Bottom-left dead zone: rows 10-18, cols 1-9
+    for r in range(10, G - 1):
+        for c in range(1, 10):
+            walls.add((r, c))
+    # Top-right dead zone: rows 1-2, cols 11-18
+    for r in range(1, 3):
+        for c in range(11, G - 1):
+            walls.add((r, c))
+    # Note: rows 10-18 cols 16-18 are NOT blocked (v2 restores full Post-D corridor)
+    return frozenset(walls)
+
+
+_WALLS_C2 = _build_walls_c2()
+
+
+def _bfs_reachable_c2(start_pos, start_key, permanent_walls, door_cell, key_cells, grid_size):
+    """BFS over extended state (pos, has_key).  Door requires has_key=1."""
+    G = grid_size
+    reachable = set()
+    init = (start_pos, start_key)
+    reachable.add(init)
+    queue = deque([init])
+    while queue:
+        (r, c), hk = queue.popleft()
+        for dr, dc in _DELTAS.values():
+            nr, nc = r + dr, c + dc
+            if not (0 <= nr < G and 0 <= nc < G):
+                continue
+            if (nr, nc) in permanent_walls:
+                continue
+            if (nr, nc) == door_cell and hk == 0:
+                continue
+            new_hk = 1 if (nr, nc) in key_cells else hk
+            ns = ((nr, nc), new_hk)
+            if ns not in reachable:
+                reachable.add(ns)
+                queue.append(ns)
+    return frozenset(reachable)
+
+
+_REACHABLE_C2 = _bfs_reachable_c2(
+    (1, 4), 0, _WALLS_C2, _DOOR_C2, _KEY_CELLS_C2, _GRID_C2
+)
+
+
+class EnvC_v2(_GridBase):
+    """
+    20×20 Key-Door Staged Multi-Route gridworld (validation environment; BC/IQL confirmed, CQL mixed evidence).
+
+    Extended state: ((row, col), has_key) where has_key ∈ {0, 1}.
+    Two key cells (K1=(5,2), K2=(5,7)): stepping on either automatically sets
+    has_key=1 if it was 0.  Door at (9,10) is only passable with has_key=1.
+    Goal: (9,18).  Horizon: 300 steps.
+
+    Four combined route families:
+      LU = Pre-L corridor (via K1) + Post-U corridor
+      LD = Pre-L corridor (via K1) + Post-D corridor
+      RU = Pre-R corridor (via K2) + Post-U corridor
+      RD = Pre-R corridor (via K2) + Post-D corridor
+
+    Reachable extended states: 269.  SA pairs: 1076.
+
+    Validation status (2026-04-08): BC and IQL formally validated — both show
+    wide > narrow (gaps +0.020 and +0.024; both CIs non-overlapping). Narrow
+    policies lock to LU path (return 0.66); wide discovers shorter RU/RD paths
+    (return 0.70) in 10–12/20 seeds. CQL smoke passed (4/4); formal 20-seed pending.
+    Dataset config (frozen):
+      small-wide:       50k, LU+LD+RU+RD, delay=0.05, uniform_random, seed=600
+      large-narrow-LU: 200k, LU only,     delay=0.05, opposite,       seed=601
+    """
+
+    start_pos        = (1, 4)
+    goal_pos         = (9, 18)
+    door_pos         = _DOOR_C2
+    key_cells        = _KEY_CELLS_C2
+    grid_size        = _GRID_C2
+    _horizon         = 300        # key-door task needs longer horizon
+    family_waypoints = FAMILY_WAYPOINTS_C2
+    corridor_info    = CORRIDOR_C2
+
+    def __init__(self):
+        super().__init__()
+        self._walls  = _WALLS_C2
+        self._start  = self.start_pos
+        self._goal   = self.goal_pos
+        self._has_key = 0
+
+    def _on_reset(self):
+        self._has_key = 0
+
+    def _try_move(self, pos, action):
+        dr, dc = _DELTAS[action]
+        r, c = pos
+        nr, nc = r + dr, c + dc
+        if (nr, nc) in self._walls:
+            return pos
+        # Door is blocked without key
+        if (nr, nc) == _DOOR_C2 and self._has_key == 0:
+            return pos
+        return (nr, nc)
+
+    def _apply_special(self, next_pos):
+        # Pick up key automatically when entering a key cell
+        if next_pos in _KEY_CELLS_C2 and self._has_key == 0:
+            self._has_key = 1
+        return next_pos, 0.0
+
+    def _make_obs(self):
+        return (self._pos, self._has_key)
+
+    def _state_from_pos(self, pos):
+        # Extended state includes has_key; pos alone is insufficient
+        return (pos, self._has_key)
+
+    def _pos_from_state(self, state):
+        return state[0]
+
+    def get_reachable_states(self):
+        return _REACHABLE_C2
+
+    def transition(self, state, action):
+        """Deterministic transition on extended state (no side effects)."""
+        pos, hk = state
+        dr, dc = _DELTAS[action]
+        nr, nc = pos[0] + dr, pos[1] + dc
+        if not (0 <= nr < _GRID_C2 and 0 <= nc < _GRID_C2):
+            return state
+        if (nr, nc) in _WALLS_C2:
+            return state
+        if (nr, nc) == _DOOR_C2 and hk == 0:
+            return state
+        new_hk = 1 if (nr, nc) in _KEY_CELLS_C2 else hk
+        return ((nr, nc), new_hk)
+
+    def cell_stage(self, pos, has_key):
+        """Return stage label for an extended state.
+
+        Returns one of: 'Pre-L', 'Pre-R', 'Pre-shared', 'door',
+                        'Post-U', 'Post-D', 'Post-shared'.
+        """
+        r, c = pos
+        if has_key == 0:
+            if 2 <= r <= 8 and 1 <= c <= 3:  return "Pre-L"
+            if 2 <= r <= 8 and 5 <= c <= 9:  return "Pre-R"
+            return "Pre-shared"
+        else:
+            if pos == _DOOR_C2:                    return "door"
+            if 3 <= r <= 8  and 12 <= c <= 18:     return "Post-U"
+            if 10 <= r <= 16 and 12 <= c <= 18:    return "Post-D"
+            return "Post-shared"

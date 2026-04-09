@@ -9,22 +9,80 @@ venv/
 .venv/
 env/
 
-# Training checkpoints (large binary files, not required for result reproduction)
+# Training checkpoints (large binaries; regenerable by re-running training scripts)
 artifacts/training_main/*.pt
 artifacts/training_iql/*.pt
 artifacts/training_quality/*.pt
 artifacts/training_validation/*.pt
+artifacts/training_validation_v2/envB_v2_bc_checkpoints/
+artifacts/training_validation_v2/envB_v2_iql_checkpoints/
+artifacts/training_validation_v2/envB_v2_cql_checkpoints/
+artifacts/training_validation_v2/envC_v2_bc_checkpoints/
+artifacts/training_validation_v2/envC_v2_iql_checkpoints/
+artifacts/training_validation_v2/envC_v2_cql_checkpoints/
 artifacts/training_benchmark/*.d3
 artifacts/training_benchmark/d4rl_cache/
 
 # Raw D4RL data
 *.hdf5
 
-# Behavior pool checkpoints (regenerable via build_envA_v2_behavior_pool.py)
-# artifacts/behavior_pool/*.pt  <- kept for reproducibility (1.9 MB total)
+# Behavior pool checkpoints (kept; only 1.9 MB, aids reproducibility)
+# artifacts/behavior_pool/*.pt  <- intentionally tracked
 
-# Internal project docs (local only, not for public GitHub)
-docs/
+# Internal pilot and audit artifacts (not needed for result verification)
+artifacts/pilot_envbc_v2/
+artifacts/training_validation/
+
+# Internal iterative/audit scripts (not needed for reproduction)
+scripts/run_envB_v2_pilot_mockup.py
+scripts/run_envB_v2_pre_formal_audit.py
+scripts/run_envB_v2_v4_audit.py
+scripts/run_envB_v2_formal_smoke.py
+scripts/run_envC_v2_pilot_mockup.py
+scripts/run_envC_v2_pilot_mockup_v2.py
+scripts/run_envC_v2_cql_smoke.py
+scripts/run_envC_v2_formal_smoke.py
+scripts/generate_figure_polish.py
+scripts/generate_figure_microfix.py
+
+# Internal docs (process/audit trail/historical snapshots — local only)
+docs/ENVB_V2_BC_FORMAL_RUNLOG.md
+docs/ENVB_V2_CQL_FORMAL_RUNLOG.md
+docs/ENVB_V2_CQL_SMOKE_NOTE.md
+docs/ENVB_V2_FINAL_CANDIDATE_DECISION.md
+docs/ENVB_V2_FINAL_CANDIDATE_SPEC.md
+docs/ENVB_V2_IMPLEMENTATION_RUNLOG.md
+docs/ENVB_V2_IQL_FORMAL_RUNLOG.md
+docs/ENVB_V2_PILOT_RUNLOG.md
+docs/ENVB_V2_PILOT_THRESHOLD_NOTE.md
+docs/ENVB_V2_PRE_FORMAL_DECISION.md
+docs/ENVB_V2_PRE_FORMAL_RECONCILIATION.md
+docs/ENVB_V2_V4_ARITHMETIC_FIX_NOTE.md
+docs/ENVB_V2_V4_DECISION.md
+docs/ENVB_V2_V4_FAIRNESS_AUDIT.md
+docs/ENVC_V2_BC_FORMAL_RUNLOG.md
+docs/ENVC_V2_CQL_FORMAL_RUNLOG.md
+docs/ENVC_V2_CQL_SMOKE_NOTE.md
+docs/ENVC_V2_IMPLEMENTATION_RUNLOG.md
+docs/ENVC_V2_IQL_FORMAL_RUNLOG.md
+docs/ENVC_V2_PILOT_RUNLOG.md
+docs/ENVC_V2_REDESIGN_V2_SPEC.md
+docs/ENVC_V2_V2_PILOT_RUNLOG.md
+docs/ENVBC_PILOT_GATE_SPEC.md
+docs/ENVBC_REBUILD_SPEC.md
+docs/EXP_PROTOCOL.md
+docs/PROJECT_SCOPE.md
+docs/RESEARCH_EVOLUTION_NOTE.md
+docs/STATISTICAL_CLOSURE_PLAN.md
+docs/STATISTICAL_CLOSURE_RUNLOG.md
+docs/STATISTICAL_CLOSURE_CONSISTENCY_CHECK.md
+docs/LOCAL_DOC_ALIGNMENT_CHECK.md
+docs/DOC_ALIGNMENT_CHANGELOG.md
+docs/FINAL_SYNC_CHANGELOG.md
+docs/FIGURE_POLISH_CHANGELOG.md
+docs/FIGURE_FINAL_MICROFIX_NOTE.md
+docs/FINAL_DOC_CONSISTENCY_CHECK.md
+docs/RELEASE_PACKAGE_MANIFEST.md
 
 # OS / IDE
 .DS_Store

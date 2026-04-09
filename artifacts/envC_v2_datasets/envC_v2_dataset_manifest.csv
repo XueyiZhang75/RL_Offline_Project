@@ -1,0 +1,3 @@
+dataset_name,coverage_mode,target_transitions,actual_transitions,norm_state_coverage,norm_sa_coverage,route_family_coverage,families_covered,delay_prob,delay_type,source_families,status
+envC_v2_small_wide,wide,50000,50000,0.5204,0.3281,1.0000,"LD,LU,RD,RU",0.05,uniform_random,"LU,LD,RU,RD",formal_prep
+envC_v2_large_narrow_LU,narrow,200000,200000,0.1859,0.0874,0.2500,LU,0.05,opposite,LU,formal_prep
